@@ -1,0 +1,600 @@
+// Laboratorio 04 1195025.cpp
+
+// Simulador de Veterinaria de Mascotas - PetVet GT
+// Programación Avanzada - Laboratorio No. 04 "Structs y objetos"
+
+#include <iostream>
+#include <string>
+#include <iomanip>
+
+using namespace std;
+
+const int MAX = 100;
+const double IVA = 0.12;
+
+// STRUCTS 
+
+struct Mascota
+{
+    string nombre;
+    string tipo;            
+    bool paseoDiario;       
+    bool cajaArenaEspecial; 
+    int idDueno;            
+};
+
+struct Dueno
+{
+    string nombre;
+    int id;
+};
+
+//  CLASE 
+
+class Gasto
+{
+private:
+    string nombreMascota;
+    int idDueno;
+    string fecha;
+    double costoPorUnidad;
+    int unidades;
+    string descripcion;
+
+public:
+    Gasto()
+    {
+        this->nombreMascota = "";
+        this->idDueno = 0;
+        this->fecha = "";
+        this->costoPorUnidad = 0.0;
+        this->unidades = 0;
+        this->descripcion = "";
+    }
+
+    Gasto(string nombreMascota, int idDueno, string fecha, double costoPorUnidad, int unidades, string descripcion)
+    {
+        this->nombreMascota = nombreMascota;
+        this->idDueno = idDueno;
+        this->fecha = fecha;
+        this->costoPorUnidad = costoPorUnidad;
+        this->unidades = unidades;
+        this->descripcion = descripcion;
+    }
+
+    //  Getters 
+    string getNombreMascota() const
+    {
+        return this->nombreMascota;
+    }
+
+    int getIdDueno() const
+    {
+        return this->idDueno;
+    }
+
+    string getFecha() const
+    {
+        return this->fecha;
+    }
+
+    double getCostoPorUnidad() const
+    {
+        return this->costoPorUnidad;
+    }
+
+    int getUnidades() const
+    {
+        return this->unidades;
+    }
+
+    string getDescripcion() const
+    {
+        return this->descripcion;
+    }
+
+    //  Setters 
+    void setNombreMascota(string nombreMascota)
+    {
+        this->nombreMascota = nombreMascota;
+    }
+
+    void setIdDueno(int idDueno)
+    {
+        this->idDueno = idDueno;
+    }
+
+    void setFecha(string fecha)
+    {
+        this->fecha = fecha;
+    }
+
+    void setCostoPorUnidad(double costoPorUnidad)
+    {
+        this->costoPorUnidad = costoPorUnidad;
+    }
+
+    void setUnidades(int unidades)
+    {
+        this->unidades = unidades;
+    }
+
+    void setDescripcion(string descripcion)
+    {
+        this->descripcion = descripcion;
+    }
+
+    //  Comportamiento 
+    double calcularSubtotal() const
+    {
+        return this->costoPorUnidad * this->unidades;
+    }
+};
+
+//  ARREGLOS GLOBALES 
+
+Dueno duenos[MAX];
+int totalDuenos = 0;
+
+Mascota mascotas[MAX];
+int totalMascotas = 0;
+
+Gasto gastos[MAX];
+int totalGastos = 0;
+
+//  PROTOTIPOS 
+
+void mostrarMenu();
+void registrarDueno();
+void registrarMascota();
+void registrarGasto();
+void calcularTotalGastadoPorMascota();
+void mostrarHistorialGastos();
+void finalizarDia();
+
+int buscarDuenoPorId(int id);
+int buscarMascotaPorNombre(const string& nombre, int idDueno);
+void listarDuenos();
+void listarMascotasDeDueno(int idDueno);
+
+//  MAIN 
+
+int main()
+{
+    int opcion;
+
+    do
+    {
+        mostrarMenu();
+        cout << "Seleccione una opcion: ";
+        cin >> opcion;
+
+        if (cin.fail())
+        {
+            cin.clear();
+            cin.ignore(10000, '\n');
+            cout << "\nEntrada invalida. Ingrese un numero.\n\n";
+            continue;
+        }
+
+        switch (opcion)
+        {
+        case 1:
+            registrarDueno();
+            break;
+        case 2:
+            registrarMascota();
+            break;
+        case 3:
+            registrarGasto();
+            break;
+        case 4:
+            calcularTotalGastadoPorMascota();
+            break;
+        case 5:
+            mostrarHistorialGastos();
+            break;
+        case 6:
+            finalizarDia();
+            break;
+        case 0:
+            cout << "\nSaliendo del sistema. Hasta pronto!\n";
+            break;
+        default:
+            cout << "\nOpcion invalida. Intente de nuevo.\n";
+            break;
+        }
+
+        cout << "\n";
+
+    } while (opcion != 0);
+
+    return 0;
+}
+
+//  IMPLEMENTACION 
+
+void mostrarMenu()
+{
+    cout << "\n";
+    cout << "           PETVET GT - MENU PRINCIPAL       \n";
+    cout << "\n";
+    cout << "1. Registrar dueno\n";
+    cout << "2. Registrar mascota\n";
+    cout << "3. Registrar gasto\n";
+    cout << "4. Calcular total gastado por mascota (+IVA)\n";
+    cout << "5. Mostrar historial de gastos de un dueno\n";
+    cout << "6. Finalizar dia (ingresos totales)\n";
+    cout << "0. Salir\n";
+    cout << "\n";
+}
+
+int buscarDuenoPorId(int id)
+{
+    for (int i = 0; i < totalDuenos; i++)
+    {
+        if (duenos[i].id == id)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int buscarMascotaPorNombre(const string& nombre, int idDueno)
+{
+    for (int i = 0; i < totalMascotas; i++)
+    {
+        if (mascotas[i].nombre == nombre && mascotas[i].idDueno == idDueno)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void listarDuenos()
+{
+    if (totalDuenos == 0)
+    {
+        cout << "No hay duenos registrados.\n";
+        return;
+    }
+
+    cout << "\n--- Duenos registrados ---\n";
+    for (int i = 0; i < totalDuenos; i++)
+    {
+        cout << "ID: " << duenos[i].id << " | Nombre: " << duenos[i].nombre << "\n";
+    }
+}
+
+void listarMascotasDeDueno(int idDueno)
+{
+    cout << "\n--- Mascotas de este dueno ---\n";
+    bool encontro = false;
+
+    for (int i = 0; i < totalMascotas; i++)
+    {
+        if (mascotas[i].idDueno == idDueno)
+        {
+            cout << "- " << mascotas[i].nombre << " (" << mascotas[i].tipo << ")\n";
+            encontro = true;
+        }
+    }
+
+    if (!encontro)
+    {
+        cout << "Este dueno no tiene mascotas registradas.\n";
+    }
+}
+
+void registrarDueno()
+{
+    if (totalDuenos >= MAX)
+    {
+        cout << "No se pueden registrar mas duenos, capacidad maxima alcanzada.\n";
+        return;
+    }
+
+    Dueno nuevo;
+
+    cout << "\n--- Registrar dueno ---\n";
+    cout << "Nombre del dueno: ";
+    cin.ignore();
+    getline(cin, nuevo.nombre);
+
+    cout << "ID del dueno: ";
+    cin >> nuevo.id;
+
+    if (cin.fail())
+    {
+        cin.clear();
+        cin.ignore(10000, '\n');
+        cout << "ID invalido. Registro cancelado.\n";
+        return;
+    }
+
+    if (buscarDuenoPorId(nuevo.id) != -1)
+    {
+        cout << "Ya existe un dueno con ese ID.\n";
+        return;
+    }
+
+    duenos[totalDuenos] = nuevo;
+    totalDuenos++;
+
+    cout << "Dueno registrado exitosamente.\n";
+}
+
+void registrarMascota()
+{
+    if (totalMascotas >= MAX)
+    {
+        cout << "No se pueden registrar mas mascotas, capacidad maxima alcanzada.\n";
+        return;
+    }
+
+    if (totalDuenos == 0)
+    {
+        cout << "Primero debe registrar al menos un dueno.\n";
+        return;
+    }
+
+    listarDuenos();
+
+    int idDueno;
+    cout << "\nIngrese el ID del dueno de esta mascota: ";
+    cin >> idDueno;
+
+    int indiceDueno = buscarDuenoPorId(idDueno);
+
+    if (indiceDueno == -1)
+    {
+        cout << "No existe un dueno con ese ID.\n";
+        return;
+    }
+
+    Mascota nueva;
+    nueva.idDueno = idDueno;
+
+    cout << "Nombre de la mascota: ";
+    cin.ignore();
+    getline(cin, nueva.nombre);
+
+    cout << "Tipo de mascota (Perro/Gato): ";
+    getline(cin, nueva.tipo);
+
+    nueva.paseoDiario = false;
+    nueva.cajaArenaEspecial = false;
+
+    if (nueva.tipo == "Perro" || nueva.tipo == "perro")
+    {
+        char respuesta;
+        cout << "Necesita paseo diario? (s/n): ";
+        cin >> respuesta;
+        nueva.paseoDiario = (respuesta == 's' || respuesta == 'S');
+    }
+    else if (nueva.tipo == "Gato" || nueva.tipo == "gato")
+    {
+        char respuesta;
+        cout << "Requiere caja de arena especial? (s/n): ";
+        cin >> respuesta;
+        nueva.cajaArenaEspecial = (respuesta == 's' || respuesta == 'S');
+    }
+    else
+    {
+        cout << "Tipo de mascota no reconocido. Registro cancelado.\n";
+        return;
+    }
+
+    mascotas[totalMascotas] = nueva;
+    totalMascotas++;
+
+    cout << "Mascota registrada exitosamente.\n";
+}
+
+void registrarGasto()
+{
+    if (totalGastos >= MAX)
+    {
+        cout << "No se pueden registrar mas gastos, capacidad maxima alcanzada.\n";
+        return;
+    }
+
+    if (totalDuenos == 0 || totalMascotas == 0)
+    {
+        cout << "Debe existir al menos un dueno y una mascota antes de registrar un gasto.\n";
+        return;
+    }
+
+    listarDuenos();
+
+    int idDueno;
+    cout << "\nIngrese el ID del dueno: ";
+    cin >> idDueno;
+
+    int indiceDueno = buscarDuenoPorId(idDueno);
+
+    if (indiceDueno == -1)
+    {
+        cout << "No existe un dueno con ese ID.\n";
+        return;
+    }
+
+    listarMascotasDeDueno(idDueno);
+
+    string nombreMascota;
+    cout << "\nIngrese el nombre de la mascota: ";
+    cin.ignore();
+    getline(cin, nombreMascota);
+
+    int indiceMascota = buscarMascotaPorNombre(nombreMascota, idDueno);
+
+    if (indiceMascota == -1)
+    {
+        cout << "Esa mascota no pertenece a este dueno.\n";
+        return;
+    }
+
+    double costoPorUnidad;
+    int unidades;
+    string fecha;
+    string descripcion;
+
+    cout << "Fecha (dd/mm/aaaa): ";
+    getline(cin, fecha);
+
+    cout << "Costo por unidad: Q";
+    cin >> costoPorUnidad;
+
+    cout << "Unidades: ";
+    cin >> unidades;
+
+    if (cin.fail() || costoPorUnidad < 0 || unidades <= 0)
+    {
+        cin.clear();
+        cin.ignore(10000, '\n');
+        cout << "Datos numericos invalidos. Registro cancelado.\n";
+        return;
+    }
+
+    cout << "Descripcion (ej. compra comida, bano mascota): ";
+    cin.ignore();
+    getline(cin, descripcion);
+
+    Gasto nuevoGasto(nombreMascota, idDueno, fecha, costoPorUnidad, unidades, descripcion);
+    gastos[totalGastos] = nuevoGasto;
+    totalGastos++;
+
+    cout << "Gasto registrado exitosamente.\n";
+}
+
+void calcularTotalGastadoPorMascota()
+{
+    if (totalMascotas == 0)
+    {
+        cout << "No hay mascotas registradas.\n";
+        return;
+    }
+
+    int idDueno;
+    listarDuenos();
+    cout << "\nIngrese el ID del dueno: ";
+    cin >> idDueno;
+
+    if (buscarDuenoPorId(idDueno) == -1)
+    {
+        cout << "No existe un dueno con ese ID.\n";
+        return;
+    }
+
+    listarMascotasDeDueno(idDueno);
+
+    string nombreMascota;
+    cout << "\nIngrese el nombre de la mascota: ";
+    cin.ignore();
+    getline(cin, nombreMascota);
+
+    if (buscarMascotaPorNombre(nombreMascota, idDueno) == -1)
+    {
+        cout << "Esa mascota no pertenece a este dueno.\n";
+        return;
+    }
+
+    double subtotal = 0.0;
+    bool tieneGastos = false;
+
+    for (int i = 0; i < totalGastos; i++)
+    {
+        if (gastos[i].getNombreMascota() == nombreMascota && gastos[i].getIdDueno() == idDueno)
+        {
+            subtotal += gastos[i].calcularSubtotal();
+            tieneGastos = true;
+        }
+    }
+
+    if (!tieneGastos)
+    {
+        cout << "Esta mascota no tiene gastos registrados.\n";
+        return;
+    }
+
+    double montoIva = subtotal * IVA;
+    double total = subtotal + montoIva;
+
+    cout << fixed << setprecision(2);
+    cout << "\n--- Total gastado por " << nombreMascota << " ---\n";
+    cout << "Subtotal: Q" << subtotal << "\n";
+    cout << "IVA (12%): Q" << montoIva << "\n";
+    cout << "Total: Q" << total << "\n";
+}
+
+void mostrarHistorialGastos()
+{
+    if (totalDuenos == 0)
+    {
+        cout << "No hay duenos registrados.\n";
+        return;
+    }
+
+    listarDuenos();
+
+    int idDueno;
+    cout << "\nIngrese el ID del dueno: ";
+    cin >> idDueno;
+
+    if (buscarDuenoPorId(idDueno) == -1)
+    {
+        cout << "No existe un dueno con ese ID.\n";
+        return;
+    }
+
+    bool tieneGastos = false;
+    cout << fixed << setprecision(2);
+    cout << "\n--- Historial de gastos ---\n";
+
+    for (int i = 0; i < totalGastos; i++)
+    {
+        if (gastos[i].getIdDueno() == idDueno)
+        {
+            cout << "Mascota: " << gastos[i].getNombreMascota()
+                << " | Fecha: " << gastos[i].getFecha()
+                << " | Descripcion: " << gastos[i].getDescripcion()
+                << " | Costo/u: Q" << gastos[i].getCostoPorUnidad()
+                << " | Unidades: " << gastos[i].getUnidades()
+                << " | Subtotal: Q" << gastos[i].calcularSubtotal() << "\n";
+            tieneGastos = true;
+        }
+    }
+
+    if (!tieneGastos)
+    {
+        cout << "Este dueno no tiene gastos registrados.\n";
+    }
+}
+
+void finalizarDia()
+{
+    if (totalGastos == 0)
+    {
+        cout << "No se registraron gastos el dia de hoy.\n";
+        return;
+    }
+
+    double subtotalGeneral = 0.0;
+
+    for (int i = 0; i < totalGastos; i++)
+    {
+        subtotalGeneral += gastos[i].calcularSubtotal();
+    }
+
+    double ivaGeneral = subtotalGeneral * IVA;
+    double totalGeneral = subtotalGeneral + ivaGeneral;
+
+    cout << fixed << setprecision(2);
+    cout << "\n CIERRE DEL DIA \n";
+    cout << "Subtotal general: Q" << subtotalGeneral << "\n";
+    cout << "IVA (12%): Q" << ivaGeneral << "\n";
+    cout << "INGRESOS TOTALES: Q" << totalGeneral << "\n";
+    cout << "\n";
+}
