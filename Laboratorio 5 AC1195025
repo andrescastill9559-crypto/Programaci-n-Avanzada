@@ -1,0 +1,915 @@
+// Lab 5 AC1195025.cpp 
+
+
+
+#include <iostream>
+#include <iomanip>
+#include <limits>
+#include <string>
+#include <vector>
+#include <cmath>
+#include <stdexcept>
+
+// Excepcion personalizada
+
+
+class ExcepcionDimensionesInvalidas : public std::runtime_error
+{
+public:
+    explicit ExcepcionDimensionesInvalidas(const std::string& mensaje);
+};
+
+ExcepcionDimensionesInvalidas::ExcepcionDimensionesInvalidas(const std::string& mensaje)
+    : std::runtime_error(mensaje)
+{
+}
+
+
+// Cliente
+
+class Cliente
+{
+private:
+    std::string nombre;
+    std::string direccion;
+    std::string telefono;
+
+public:
+    Cliente();
+    Cliente(std::string nombre, std::string direccion, std::string telefono);
+
+    std::string getNombre() const;
+    void setNombre(std::string nombre);
+
+    std::string getDireccion() const;
+    void setDireccion(std::string direccion);
+
+    std::string getTelefono() const;
+    void setTelefono(std::string telefono);
+
+    void mostrarDatos() const;
+};
+
+Cliente::Cliente()
+{
+    this->nombre = "";
+    this->direccion = "";
+    this->telefono = "";
+}
+
+Cliente::Cliente(std::string nombre, std::string direccion, std::string telefono)
+{
+    this->nombre = nombre;
+    this->direccion = direccion;
+    this->telefono = telefono;
+}
+
+std::string Cliente::getNombre() const
+{
+    return this->nombre;
+}
+
+void Cliente::setNombre(std::string nombre)
+{
+    this->nombre = nombre;
+}
+
+std::string Cliente::getDireccion() const
+{
+    return this->direccion;
+}
+
+void Cliente::setDireccion(std::string direccion)
+{
+    this->direccion = direccion;
+}
+
+std::string Cliente::getTelefono() const
+{
+    return this->telefono;
+}
+
+void Cliente::setTelefono(std::string telefono)
+{
+    this->telefono = telefono;
+}
+
+void Cliente::mostrarDatos() const
+{
+    std::cout << "Nombre: " << this->nombre << std::endl;
+    std::cout << "Direccion: " << this->direccion << std::endl;
+    std::cout << "Telefono: " << this->telefono << std::endl;
+}
+
+
+// Tanque (clase base abstracta)
+
+class Tanque
+{
+protected:
+    std::string tipo;
+    double volumen;
+    double precio;
+    double costoFijo;
+    double costoPorM3;
+
+public:
+    Tanque();
+    Tanque(std::string tipo, double costoFijo, double costoPorM3);
+    virtual ~Tanque();
+
+    std::string getTipo() const;
+    void setTipo(std::string tipo);
+
+    double getVolumen() const;
+    double getPrecio() const;
+
+    double getCostoFijo() const;
+    void setCostoFijo(double costoFijo);
+
+    double getCostoPorM3() const;
+    void setCostoPorM3(double costoPorM3);
+
+    virtual double calcularVolumen() = 0;
+
+    double calcularPrecio();
+
+    virtual void mostrarDimensiones() const = 0;
+
+
+    virtual void mostrarValoresIntermediosVolumen() const = 0;
+
+protected:
+    void validarDimensionPositiva(double valor, std::string nombreDimension) const;
+};
+
+Tanque::Tanque()
+{
+    this->tipo = "";
+    this->volumen = 0.0;
+    this->precio = 0.0;
+    this->costoFijo = 0.0;
+    this->costoPorM3 = 0.0;
+}
+
+Tanque::Tanque(std::string tipo, double costoFijo, double costoPorM3)
+{
+    this->tipo = tipo;
+    this->volumen = 0.0;
+    this->precio = 0.0;
+    this->costoFijo = 0.0;
+    this->costoPorM3 = 0.0;
+
+    this->setCostoFijo(costoFijo);
+    this->setCostoPorM3(costoPorM3);
+}
+
+Tanque::~Tanque()
+{
+}
+
+std::string Tanque::getTipo() const
+{
+    return this->tipo;
+}
+
+void Tanque::setTipo(std::string tipo)
+{
+    this->tipo = tipo;
+}
+
+double Tanque::getVolumen() const
+{
+    return this->volumen;
+}
+
+double Tanque::getPrecio() const
+{
+    return this->precio;
+}
+
+double Tanque::getCostoFijo() const
+{
+    return this->costoFijo;
+}
+
+void Tanque::setCostoFijo(double costoFijo)
+{
+    if (costoFijo < 0)
+    {
+        throw ExcepcionDimensionesInvalidas("El costo fijo no puede ser negativo.");
+    }
+    this->costoFijo = costoFijo;
+}
+
+double Tanque::getCostoPorM3() const
+{
+    return this->costoPorM3;
+}
+
+void Tanque::setCostoPorM3(double costoPorM3)
+{
+    if (costoPorM3 <= 0)
+    {
+        throw ExcepcionDimensionesInvalidas("El costo por metro cubico debe ser mayor que cero.");
+    }
+    this->costoPorM3 = costoPorM3;
+}
+
+double Tanque::calcularPrecio()
+{
+    this->volumen = this->calcularVolumen();
+
+    if (this->volumen <= 0)
+    {
+        throw ExcepcionDimensionesInvalidas("No se puede calcular el precio: el volumen calculado es invalido.");
+    }
+
+    this->precio = this->costoFijo + (this->costoPorM3 * this->volumen);
+    return this->precio;
+}
+
+void Tanque::validarDimensionPositiva(double valor, std::string nombreDimension) const
+{
+    if (valor <= 0)
+    {
+        throw ExcepcionDimensionesInvalidas("La dimension '" + nombreDimension + "' debe ser mayor que cero.");
+    }
+}
+
+// TanqueCubico
+
+class TanqueCubico : public Tanque
+{
+private:
+    double lado;
+
+public:
+    TanqueCubico();
+    TanqueCubico(double lado, double costoFijo, double costoPorM3);
+
+    double getLado() const;
+    void setLado(double lado);
+
+    double calcularVolumen() override;
+    void mostrarDimensiones() const override;
+    void mostrarValoresIntermediosVolumen() const override;
+};
+
+TanqueCubico::TanqueCubico() : Tanque()
+{
+    this->lado = 0.0;
+    this->tipo = "Cubico";
+}
+
+TanqueCubico::TanqueCubico(double lado, double costoFijo, double costoPorM3)
+    : Tanque("Cubico", costoFijo, costoPorM3)
+{
+    this->setLado(lado);
+}
+
+double TanqueCubico::getLado() const
+{
+    return this->lado;
+}
+
+void TanqueCubico::setLado(double lado)
+{
+    this->validarDimensionPositiva(lado, "lado");
+    this->lado = lado;
+}
+
+double TanqueCubico::calcularVolumen()
+{
+    this->volumen = std::pow(this->lado, 3);
+    return this->volumen;
+}
+
+void TanqueCubico::mostrarDimensiones() const
+{
+    std::cout << "  Lado: " << this->lado << " m" << std::endl;
+}
+
+void TanqueCubico::mostrarValoresIntermediosVolumen() const
+{
+    std::cout << "  [DEBUG] Formula: volumen = lado^3" << std::endl;
+    std::cout << "  [DEBUG] lado = " << this->lado << std::endl;
+    std::cout << "  [DEBUG] lado^3 = " << std::pow(this->lado, 3) << std::endl;
+}
+
+// TanqueEsferico
+
+class TanqueEsferico : public Tanque
+{
+private:
+    double radio;
+    static const double PI;
+
+public:
+    TanqueEsferico();
+    TanqueEsferico(double radio, double costoFijo, double costoPorM3);
+
+    double getRadio() const;
+    void setRadio(double radio);
+
+    double calcularVolumen() override;
+    void mostrarDimensiones() const override;
+    void mostrarValoresIntermediosVolumen() const override;
+};
+
+const double TanqueEsferico::PI = 3.14159265358979323846;
+
+TanqueEsferico::TanqueEsferico() : Tanque()
+{
+    this->radio = 0.0;
+    this->tipo = "Esferico";
+}
+
+TanqueEsferico::TanqueEsferico(double radio, double costoFijo, double costoPorM3)
+    : Tanque("Esferico", costoFijo, costoPorM3)
+{
+    this->setRadio(radio);
+}
+
+double TanqueEsferico::getRadio() const
+{
+    return this->radio;
+}
+
+void TanqueEsferico::setRadio(double radio)
+{
+    this->validarDimensionPositiva(radio, "radio");
+    this->radio = radio;
+}
+
+double TanqueEsferico::calcularVolumen()
+{
+    this->volumen = (4.0 / 3.0) * TanqueEsferico::PI * std::pow(this->radio, 3);
+    return this->volumen;
+}
+
+void TanqueEsferico::mostrarDimensiones() const
+{
+    std::cout << "  Radio: " << this->radio << " m" << std::endl;
+}
+
+void TanqueEsferico::mostrarValoresIntermediosVolumen() const
+{
+    std::cout << "  [DEBUG] Formula: volumen = (4/3) * PI * radio^3" << std::endl;
+    std::cout << "  [DEBUG] radio = " << this->radio << std::endl;
+    std::cout << "  [DEBUG] radio^3 = " << std::pow(this->radio, 3) << std::endl;
+    std::cout << "  [DEBUG] (4/3) * PI = " << (4.0 / 3.0) * TanqueEsferico::PI << std::endl;
+}
+
+// TanqueCilindrico
+
+// Tanque con forma de cilindro solido. volumen = PI * radio^2 * altura
+class TanqueCilindrico : public Tanque
+{
+private:
+    double radio;
+    double altura;
+    static const double PI;
+
+public:
+    TanqueCilindrico();
+    TanqueCilindrico(double radio, double altura, double costoFijo, double costoPorM3);
+
+    double getRadio() const;
+    void setRadio(double radio);
+
+    double getAltura() const;
+    void setAltura(double altura);
+
+    double calcularVolumen() override;
+    void mostrarDimensiones() const override;
+    void mostrarValoresIntermediosVolumen() const override;
+};
+
+const double TanqueCilindrico::PI = 3.14159265358979323846;
+
+TanqueCilindrico::TanqueCilindrico() : Tanque()
+{
+    this->radio = 0.0;
+    this->altura = 0.0;
+    this->tipo = "Cilindrico";
+}
+
+TanqueCilindrico::TanqueCilindrico(double radio, double altura, double costoFijo, double costoPorM3)
+    : Tanque("Cilindrico", costoFijo, costoPorM3)
+{
+    this->setRadio(radio);
+    this->setAltura(altura);
+}
+
+double TanqueCilindrico::getRadio() const
+{
+    return this->radio;
+}
+
+void TanqueCilindrico::setRadio(double radio)
+{
+    this->validarDimensionPositiva(radio, "radio");
+    this->radio = radio;
+}
+
+double TanqueCilindrico::getAltura() const
+{
+    return this->altura;
+}
+
+void TanqueCilindrico::setAltura(double altura)
+{
+    this->validarDimensionPositiva(altura, "altura");
+    this->altura = altura;
+}
+
+double TanqueCilindrico::calcularVolumen()
+{
+    this->volumen = TanqueCilindrico::PI * std::pow(this->radio, 2) * this->altura;
+    return this->volumen;
+}
+
+void TanqueCilindrico::mostrarDimensiones() const
+{
+    std::cout << "  Radio: " << this->radio << " m" << std::endl;
+    std::cout << "  Altura: " << this->altura << " m" << std::endl;
+}
+
+void TanqueCilindrico::mostrarValoresIntermediosVolumen() const
+{
+    std::cout << "  [DEBUG] Formula: volumen = PI * radio^2 * altura" << std::endl;
+    std::cout << "  [DEBUG] radio = " << this->radio << ", altura = " << this->altura << std::endl;
+    std::cout << "  [DEBUG] radio^2 = " << std::pow(this->radio, 2) << std::endl;
+    std::cout << "  [DEBUG] PI * radio^2 * altura = " << TanqueCilindrico::PI * std::pow(this->radio, 2) * this->altura << std::endl;
+}
+
+// TanqueCilindricoHueco
+
+class TanqueCilindricoHueco : public Tanque
+{
+private:
+    double radioExterno;
+    double radioInterno;
+    double altura;
+    static const double PI;
+
+public:
+    TanqueCilindricoHueco();
+    TanqueCilindricoHueco(double radioExterno, double radioInterno, double altura, double costoFijo, double costoPorM3);
+
+    double getRadioExterno() const;
+    double getRadioInterno() const;
+    double getAltura() const;
+    void setAltura(double altura);
+
+
+    void setRadios(double radioExterno, double radioInterno);
+
+    double calcularVolumen() override;
+    void mostrarDimensiones() const override;
+    void mostrarValoresIntermediosVolumen() const override;
+};
+
+const double TanqueCilindricoHueco::PI = 3.14159265358979323846;
+
+TanqueCilindricoHueco::TanqueCilindricoHueco() : Tanque()
+{
+    this->radioExterno = 0.0;
+    this->radioInterno = 0.0;
+    this->altura = 0.0;
+    this->tipo = "CilindricoHueco";
+}
+
+TanqueCilindricoHueco::TanqueCilindricoHueco(double radioExterno, double radioInterno, double altura, double costoFijo, double costoPorM3)
+    : Tanque("CilindricoHueco", costoFijo, costoPorM3)
+{
+    this->setRadios(radioExterno, radioInterno);
+    this->setAltura(altura);
+}
+
+double TanqueCilindricoHueco::getRadioExterno() const
+{
+    return this->radioExterno;
+}
+
+double TanqueCilindricoHueco::getRadioInterno() const
+{
+    return this->radioInterno;
+}
+
+double TanqueCilindricoHueco::getAltura() const
+{
+    return this->altura;
+}
+
+void TanqueCilindricoHueco::setAltura(double altura)
+{
+    this->validarDimensionPositiva(altura, "altura");
+    this->altura = altura;
+}
+
+void TanqueCilindricoHueco::setRadios(double radioExterno, double radioInterno)
+{
+    this->validarDimensionPositiva(radioExterno, "radioExterno");
+    this->validarDimensionPositiva(radioInterno, "radioInterno");
+
+    if (radioInterno >= radioExterno)
+    {
+        throw ExcepcionDimensionesInvalidas("El radio interno debe ser menor que el radio externo.");
+    }
+
+    this->radioExterno = radioExterno;
+    this->radioInterno = radioInterno;
+}
+
+double TanqueCilindricoHueco::calcularVolumen()
+{
+    this->volumen = TanqueCilindricoHueco::PI * this->altura *
+        (std::pow(this->radioExterno, 2) - std::pow(this->radioInterno, 2));
+    return this->volumen;
+}
+
+void TanqueCilindricoHueco::mostrarDimensiones() const
+{
+    std::cout << "  Radio externo: " << this->radioExterno << " m" << std::endl;
+    std::cout << "  Radio interno: " << this->radioInterno << " m" << std::endl;
+    std::cout << "  Altura: " << this->altura << " m" << std::endl;
+}
+
+void TanqueCilindricoHueco::mostrarValoresIntermediosVolumen() const
+{
+    std::cout << "  [DEBUG] Formula: volumen = PI * altura * (radioExterno^2 - radioInterno^2)" << std::endl;
+    std::cout << "  [DEBUG] radioExterno = " << this->radioExterno << ", radioInterno = " << this->radioInterno
+        << ", altura = " << this->altura << std::endl;
+    std::cout << "  [DEBUG] radioExterno^2 = " << std::pow(this->radioExterno, 2) << std::endl;
+    std::cout << "  [DEBUG] radioInterno^2 = " << std::pow(this->radioInterno, 2) << std::endl;
+    std::cout << "  [DEBUG] (radioExterno^2 - radioInterno^2) = "
+        << (std::pow(this->radioExterno, 2) - std::pow(this->radioInterno, 2)) << std::endl;
+}
+
+// Factura
+
+class Factura
+{
+private:
+    Cliente cliente;
+    std::vector<Tanque*> tanques;
+    std::vector<std::string> registroErrores;
+
+public:
+    Factura();
+    Factura(Cliente cliente);
+    ~Factura();
+
+    void setCliente(Cliente cliente);
+    Cliente getCliente() const;
+
+    void agregarTanque(Tanque* tanque);
+    int getCantidadTanques() const;
+
+    void agregarError(std::string mensajeError);
+
+    double calcularTotal() const;
+
+    void mostrarFactura() const;
+    void mostrarRegistroErrores() const;
+    void mostrarValoresIntermediosCompletos() const;
+};
+
+Factura::Factura()
+{
+}
+
+Factura::Factura(Cliente cliente)
+{
+    this->cliente = cliente;
+}
+
+Factura::~Factura()
+{
+    for (size_t i = 0; i < this->tanques.size(); i++)
+    {
+        delete this->tanques[i];
+    }
+    this->tanques.clear();
+}
+
+void Factura::setCliente(Cliente cliente)
+{
+    this->cliente = cliente;
+}
+
+Cliente Factura::getCliente() const
+{
+    return this->cliente;
+}
+
+void Factura::agregarTanque(Tanque* tanque)
+{
+    this->tanques.push_back(tanque);
+}
+
+int Factura::getCantidadTanques() const
+{
+    return static_cast<int>(this->tanques.size());
+}
+
+void Factura::agregarError(std::string mensajeError)
+{
+    this->registroErrores.push_back(mensajeError);
+}
+
+double Factura::calcularTotal() const
+{
+    double total = 0.0;
+    for (size_t i = 0; i < this->tanques.size(); i++)
+    {
+        total += this->tanques[i]->getPrecio();
+    }
+    return total;
+}
+
+void Factura::mostrarFactura() const
+{
+    std::cout << "\n===== FACTURA =====" << std::endl;
+    std::cout << "--- Datos del cliente ---" << std::endl;
+    this->cliente.mostrarDatos();
+
+    std::cout << "\n--- Tanques adquiridos ---" << std::endl;
+    if (this->tanques.empty())
+    {
+        std::cout << "No se han registrado tanques." << std::endl;
+    }
+
+    for (size_t i = 0; i < this->tanques.size(); i++)
+    {
+        std::cout << "\nTanque #" << (i + 1) << " - Tipo: " << this->tanques[i]->getTipo() << std::endl;
+        this->tanques[i]->mostrarDimensiones();
+        std::cout << "  Volumen: " << std::fixed << std::setprecision(4) << this->tanques[i]->getVolumen() << " m3" << std::endl;
+        std::cout << "  Precio individual: Q" << std::fixed << std::setprecision(2) << this->tanques[i]->getPrecio() << std::endl;
+    }
+
+    std::cout << "\nTotal a pagar: Q" << std::fixed << std::setprecision(2) << this->calcularTotal() << std::endl;
+    std::cout << "====================\n" << std::endl;
+}
+
+void Factura::mostrarRegistroErrores() const
+{
+    std::cout << "\n===== REGISTRO DE ERRORES =====" << std::endl;
+    if (this->registroErrores.empty())
+    {
+        std::cout << "No se registraron errores durante la ejecucion." << std::endl;
+    }
+    else
+    {
+        for (size_t i = 0; i < this->registroErrores.size(); i++)
+        {
+            std::cout << (i + 1) << ". " << this->registroErrores[i] << std::endl;
+        }
+    }
+    std::cout << "================================\n" << std::endl;
+}
+
+void Factura::mostrarValoresIntermediosCompletos() const
+{
+    std::cout << "\n===== VALORES INTERMEDIOS (DEPURACION) =====" << std::endl;
+    if (this->tanques.empty())
+    {
+        std::cout << "No hay tanques registrados para depurar." << std::endl;
+    }
+
+    for (size_t i = 0; i < this->tanques.size(); i++)
+    {
+        std::cout << "\nTanque #" << (i + 1) << " - Tipo: " << this->tanques[i]->getTipo() << std::endl;
+        this->tanques[i]->mostrarValoresIntermediosVolumen();
+        std::cout << "  [DEBUG] costoFijo = " << this->tanques[i]->getCostoFijo() << std::endl;
+        std::cout << "  [DEBUG] costoPorM3 = " << this->tanques[i]->getCostoPorM3() << std::endl;
+        std::cout << "  [DEBUG] precio = costoFijo + (costoPorM3 * volumen) = "
+            << this->tanques[i]->getCostoFijo() << " + (" << this->tanques[i]->getCostoPorM3()
+            << " * " << this->tanques[i]->getVolumen() << ") = "
+            << this->tanques[i]->getPrecio() << std::endl;
+    }
+    std::cout << "=============================================\n" << std::endl;
+}
+
+
+// Utilidades de lectura validada
+
+
+double leerDouble(const std::string& mensaje)
+{
+    double valor;
+    while (true)
+    {
+        std::cout << mensaje;
+        std::cin >> valor;
+
+        if (std::cin.fail())
+        {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Entrada invalida. Ingrese un numero." << std::endl;
+            continue;
+        }
+
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        return valor;
+    }
+}
+
+int leerEntero(const std::string& mensaje)
+{
+    int valor;
+    while (true)
+    {
+        std::cout << mensaje;
+        std::cin >> valor;
+
+        if (std::cin.fail())
+        {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Entrada invalida. Ingrese un numero entero." << std::endl;
+            continue;
+        }
+
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        return valor;
+    }
+}
+
+std::string leerTexto(const std::string& mensaje)
+{
+    std::string valor;
+    std::cout << mensaje;
+    std::getline(std::cin, valor);
+    return valor;
+}
+
+
+// Registro de cliente
+
+
+Cliente registrarCliente()
+{
+    std::cout << "\n--- Registro de cliente ---" << std::endl;
+    std::string nombre = leerTexto("Nombre: ");
+    std::string direccion = leerTexto("Direccion: ");
+    std::string telefono = leerTexto("Telefono: ");
+
+    return Cliente(nombre, direccion, telefono);
+}
+
+
+// Creacion de un tanque segun el tipo elegido
+
+
+Tanque* crearTanque(int tipoSeleccionado)
+{
+    double costoFijo = leerDouble("Costo fijo (Q): ");
+    double costoPorM3 = leerDouble("Costo por metro cubico (Q/m3): ");
+
+    switch (tipoSeleccionado)
+    {
+    case 1:
+    {
+        double lado = leerDouble("Lado del cubo (m): ");
+        return new TanqueCubico(lado, costoFijo, costoPorM3);
+    }
+    case 2:
+    {
+        double radio = leerDouble("Radio de la esfera (m): ");
+        return new TanqueEsferico(radio, costoFijo, costoPorM3);
+    }
+    case 3:
+    {
+        double radio = leerDouble("Radio del cilindro (m): ");
+        double altura = leerDouble("Altura del cilindro (m): ");
+        return new TanqueCilindrico(radio, altura, costoFijo, costoPorM3);
+    }
+    case 4:
+    {
+        double radioExterno = leerDouble("Radio externo (m): ");
+        double radioInterno = leerDouble("Radio interno (m): ");
+        double altura = leerDouble("Altura (m): ");
+        return new TanqueCilindricoHueco(radioExterno, radioInterno, altura, costoFijo, costoPorM3);
+    }
+    default:
+        return nullptr;
+    }
+}
+
+
+// Flujo de compra: agrega uno o varios tanques a la factura
+
+void registrarCompraTanques(Factura& factura)
+{
+    bool continuarComprando = true;
+
+    while (continuarComprando)
+    {
+        std::cout << "\n--- Nuevo tanque ---" << std::endl;
+        std::cout << "1. Tanque cubico" << std::endl;
+        std::cout << "2. Tanque esferico" << std::endl;
+        std::cout << "3. Tanque cilindrico" << std::endl;
+        std::cout << "4. Tanque cilindrico hueco" << std::endl;
+        int tipoSeleccionado = leerEntero("Seleccione el tipo de tanque (1-4): ");
+
+        if (tipoSeleccionado < 1 || tipoSeleccionado > 4)
+        {
+            std::cout << "Opcion invalida. Intente nuevamente." << std::endl;
+            continue;
+        }
+
+        Tanque* nuevoTanque = nullptr;
+
+        try
+        {
+            nuevoTanque = crearTanque(tipoSeleccionado);
+            nuevoTanque->calcularPrecio();
+            factura.agregarTanque(nuevoTanque);
+            std::cout << "Tanque agregado correctamente. Volumen: " << nuevoTanque->getVolumen()
+                << " m3 | Precio: Q" << nuevoTanque->getPrecio() << std::endl;
+        }
+        catch (const ExcepcionDimensionesInvalidas& excepcion)
+        {
+            std::cout << "Error: " << excepcion.what() << std::endl;
+            factura.agregarError(excepcion.what());
+            delete nuevoTanque;
+        }
+        catch (const std::exception& excepcion)
+        {
+            std::cout << "Error inesperado: " << excepcion.what() << std::endl;
+            factura.agregarError(excepcion.what());
+            delete nuevoTanque;
+        }
+
+        std::string respuesta = leerTexto("\nDesea agregar otro tanque? (s/n): ");
+        continuarComprando = (respuesta == "s" || respuesta == "S");
+    }
+}
+
+// Menu principal
+
+void mostrarMenu()
+{
+    std::cout << "\n===== SISTEMA DE VENTA DE TANQUES =====" << std::endl;
+    std::cout << "1. Registrar cliente y compra" << std::endl;
+    std::cout << "2. Mostrar factura" << std::endl;
+    std::cout << "3. Mostrar valores intermedios (depuracion)" << std::endl;
+    std::cout << "4. Mostrar registro de errores" << std::endl;
+    std::cout << "5. Salir" << std::endl;
+}
+
+int main()
+{
+    Factura factura;
+    bool clienteRegistrado = false;
+    bool salir = false;
+
+    std::cout << "Bienvenido al sistema de fabricacion y venta de tanques de agua." << std::endl;
+
+    while (!salir)
+    {
+        mostrarMenu();
+        int opcion = leerEntero("Seleccione una opcion: ");
+
+        switch (opcion)
+        {
+        case 1:
+        {
+            Cliente cliente = registrarCliente();
+            factura.setCliente(cliente);
+            clienteRegistrado = true;
+            registrarCompraTanques(factura);
+            break;
+        }
+        case 2:
+            if (!clienteRegistrado)
+            {
+                std::cout << "\nAun no se ha registrado ningun cliente." << std::endl;
+            }
+            else
+            {
+                factura.mostrarFactura();
+            }
+            break;
+        case 3:
+            factura.mostrarValoresIntermediosCompletos();
+            break;
+        case 4:
+            factura.mostrarRegistroErrores();
+            break;
+        case 5:
+            salir = true;
+            std::cout << "\nGracias por usar el sistema." << std::endl;
+            break;
+        default:
+            std::cout << "Opcion invalida. Intente nuevamente." << std::endl;
+            break;
+        }
+    }
+
+    return 0;
+}
