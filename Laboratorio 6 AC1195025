@@ -1,0 +1,607 @@
+// Lab 6 AC1195025.cpp 
+
+
+// Universidad Rafael Landivar
+// Facultad de Ingenieria - Departamento de Ciencias Basicas
+// Programacion Avanzada - Laboratorio No. 06 "Punteros"
+
+#include <iostream>
+#include <string>
+#include <stdexcept>
+#include <cstdlib>
+
+using namespace std;
+
+
+
+class ExcepcionIsbnDuplicado : public runtime_error
+{
+public:
+    ExcepcionIsbnDuplicado(string mensaje) : runtime_error(mensaje)
+    {
+    }
+};
+
+class ExcepcionInventarioLleno : public runtime_error
+{
+public:
+    ExcepcionInventarioLleno(string mensaje) : runtime_error(mensaje)
+    {
+    }
+};
+
+class ExcepcionDatoInvalido : public runtime_error
+{
+public:
+    ExcepcionDatoInvalido(string mensaje) : runtime_error(mensaje)
+    {
+    }
+};
+
+
+
+// CLASE Comic
+
+class Comic
+{
+private:
+    string titulo;
+    string editorial;
+    int numeroEdicion;
+    string isbn;
+    double precio;
+    int anioPublicacion;
+    string estadoConservacion;
+    bool esEdicionLimitada;
+    string genero;
+
+public:
+    // Constructor por defecto
+    Comic()
+    {
+        this->titulo = "";
+        this->editorial = "";
+        this->numeroEdicion = 0;
+        this->isbn = "";
+        this->precio = 0.0;
+        this->anioPublicacion = 0;
+        this->estadoConservacion = "";
+        this->esEdicionLimitada = false;
+        this->genero = "";
+    }
+
+    // Constructor con parametros
+    Comic(string titulo, string editorial, int numeroEdicion, string isbn,
+        double precio, int anioPublicacion, string estadoConservacion,
+        bool esEdicionLimitada, string genero)
+    {
+        this->titulo = titulo;
+        this->editorial = editorial;
+        this->numeroEdicion = numeroEdicion;
+        this->isbn = isbn;
+        this->precio = precio;
+        this->anioPublicacion = anioPublicacion;
+        this->estadoConservacion = estadoConservacion;
+        this->esEdicionLimitada = esEdicionLimitada;
+        this->genero = genero;
+    }
+
+    //  GETTERS 
+    string getTitulo()
+    {
+        return this->titulo;
+    }
+
+    string getEditorial()
+    {
+        return this->editorial;
+    }
+
+    int getNumeroEdicion()
+    {
+        return this->numeroEdicion;
+    }
+
+    string getIsbn()
+    {
+        return this->isbn;
+    }
+
+    double getPrecio()
+    {
+        return this->precio;
+    }
+
+    int getAnioPublicacion()
+    {
+        return this->anioPublicacion;
+    }
+
+    string getEstadoConservacion()
+    {
+        return this->estadoConservacion;
+    }
+
+    bool getEsEdicionLimitada()
+    {
+        return this->esEdicionLimitada;
+    }
+
+    string getGenero()
+    {
+        return this->genero;
+    }
+
+    //  SETTERS 
+    void setTitulo(string titulo)
+    {
+        this->titulo = titulo;
+    }
+
+    void setEditorial(string editorial)
+    {
+        this->editorial = editorial;
+    }
+
+    void setNumeroEdicion(int numeroEdicion)
+    {
+        this->numeroEdicion = numeroEdicion;
+    }
+
+    void setIsbn(string isbn)
+    {
+        this->isbn = isbn;
+    }
+
+    void setPrecio(double precio)
+    {
+        if (precio < 0)
+        {
+            throw ExcepcionDatoInvalido("El precio no puede ser negativo.");
+        }
+        this->precio = precio;
+    }
+
+    void setAnioPublicacion(int anioPublicacion)
+    {
+        if (anioPublicacion < 1900 || anioPublicacion > 2100)
+        {
+            throw ExcepcionDatoInvalido("El anio de publicacion no es valido.");
+        }
+        this->anioPublicacion = anioPublicacion;
+    }
+
+    void setEstadoConservacion(string estadoConservacion)
+    {
+        this->estadoConservacion = estadoConservacion;
+    }
+
+    void setEsEdicionLimitada(bool esEdicionLimitada)
+    {
+        this->esEdicionLimitada = esEdicionLimitada;
+    }
+
+    void setGenero(string genero)
+    {
+        this->genero = genero;
+    }
+
+    void mostrarInformacion()
+    {
+        cout << "------------------------------------------------------" << endl;
+        cout << "Titulo            : " << this->titulo << endl;
+        cout << "Editorial         : " << this->editorial << endl;
+        cout << "No. de edicion    : " << this->numeroEdicion << endl;
+        cout << "ISBN              : " << this->isbn << endl;
+        cout << "Precio            : Q" << this->precio << endl;
+        cout << "Anio publicacion  : " << this->anioPublicacion << endl;
+        cout << "Estado            : " << this->estadoConservacion << endl;
+        cout << "Edicion limitada  : " << (this->esEdicionLimitada ? "Si" : "No") << endl;
+        cout << "Genero            : " << this->genero << endl;
+        cout << "------------------------------------------------------" << endl;
+    }
+};
+
+
+
+// CONSTANTES GLOBALES
+const int TAMANO_INVENTARIO = 5;
+
+
+
+// PROTOTIPOS DE FUNCIONES
+int mostrarMenu();
+void registrarComic(Comic* inventario[], int tamano);
+void mostrarComics(Comic* inventario[], int tamano);
+void buscarComic(Comic* inventario[], int tamano);
+void eliminarComic(Comic* inventario[], int tamano);
+bool existeIsbn(Comic* inventario[], int tamano, string isbn);
+void liberarInventario(Comic* inventario[], int tamano);
+int leerEntero(string mensaje);
+double leerDouble(string mensaje);
+
+
+// FUNCION PRINCIPAL
+int main()
+{
+    Comic* inventario[TAMANO_INVENTARIO];
+    for (int i = 0; i < TAMANO_INVENTARIO; i++)
+    {
+        inventario[i] = nullptr;
+    }
+
+    int opcion = 0;
+
+    do
+    {
+        opcion = mostrarMenu();
+
+        switch (opcion)
+        {
+        case 1:
+            registrarComic(inventario, TAMANO_INVENTARIO);
+            break;
+        case 2:
+            mostrarComics(inventario, TAMANO_INVENTARIO);
+            break;
+        case 3:
+            buscarComic(inventario, TAMANO_INVENTARIO);
+            break;
+        case 4:
+            eliminarComic(inventario, TAMANO_INVENTARIO);
+            break;
+        case 5:
+            cout << "\nSaliendo del sistema... Hasta luego!\n" << endl;
+            break;
+        default:
+            cout << "\nOpcion invalida, intente de nuevo.\n" << endl;
+            break;
+        }
+
+    } while (opcion != 5);
+
+    // Liberar memoria de los comics que quedaron pendientes
+    liberarInventario(inventario, TAMANO_INVENTARIO);
+
+    system("pause");
+    return 0;
+}
+
+
+
+// IMPLEMENTACION DE FUNCIONES
+
+int mostrarMenu()
+{
+    int opcion;
+    cout << "========================================" << endl;
+    cout << "   PROGRAMACION AVANZADA COMIC BOOK STORE" << endl;
+    cout << "========================================" << endl;
+    cout << "1. Registrar comic" << endl;
+    cout << "2. Ver informacion guardada de todos los comics" << endl;
+    cout << "3. Buscar comic" << endl;
+    cout << "4. Eliminar comic" << endl;
+    cout << "5. Salir" << endl;
+    cout << "----------------------------------------" << endl;
+    cout << "Seleccione una opcion: ";
+    cin >> opcion;
+    cin.ignore();
+    return opcion;
+}
+
+int leerEntero(string mensaje)
+{
+    int valor;
+    cout << mensaje;
+    while (!(cin >> valor))
+    {
+        cin.clear();
+        cin.ignore(10000, '\n');
+        cout << "Entrada invalida. Ingrese un numero entero: ";
+    }
+    cin.ignore();
+    return valor;
+}
+
+double leerDouble(string mensaje)
+{
+    double valor;
+    cout << mensaje;
+    while (!(cin >> valor))
+    {
+        cin.clear();
+        cin.ignore(10000, '\n');
+        cout << "Entrada invalida. Ingrese un numero: ";
+    }
+    cin.ignore();
+    return valor;
+}
+
+bool existeIsbn(Comic* inventario[], int tamano, string isbn)
+{
+    for (int i = 0; i < tamano; i++)
+    {
+        if (inventario[i] != nullptr && inventario[i]->getIsbn() == isbn)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+void registrarComic(Comic* inventario[], int tamano)
+{
+   
+    int posicionLibre = -1;
+    for (int i = 0; i < tamano; i++)
+    {
+        if (inventario[i] == nullptr)
+        {
+            posicionLibre = i;
+            break;
+        }
+    }
+
+    try
+    {
+        if (posicionLibre == -1)
+        {
+            throw ExcepcionInventarioLleno("No hay espacio disponible en el inventario. Elimine un comic antes de registrar otro.");
+        }
+
+        cout << "\n--- Registrar nuevo comic ---" << endl;
+
+        string titulo, editorial, isbn, estadoConservacion, genero;
+        int numeroEdicion, anioPublicacion;
+        double precio;
+        char respuestaEdicionLimitada;
+        bool esEdicionLimitada;
+
+        cout << "Titulo: ";
+        getline(cin, titulo);
+
+        cout << "Editorial (Marvel, DC, Image, etc.): ";
+        getline(cin, editorial);
+
+        numeroEdicion = leerEntero("Numero de edicion (issue #): ");
+
+        cout << "ISBN o codigo de barras: ";
+        getline(cin, isbn);
+
+        if (existeIsbn(inventario, tamano, isbn))
+        {
+            throw ExcepcionIsbnDuplicado("Ya existe un comic registrado con el ISBN: " + isbn);
+        }
+
+        precio = leerDouble("Precio: Q");
+        anioPublicacion = leerEntero("Anio de publicacion: ");
+
+        cout << "Estado de conservacion (Nuevo / Usado-Bueno / Usado-Regular): ";
+        getline(cin, estadoConservacion);
+
+        cout << "Es edicion limitada? (s/n): ";
+        cin >> respuestaEdicionLimitada;
+        cin.ignore();
+        esEdicionLimitada = (respuestaEdicionLimitada == 's' || respuestaEdicionLimitada == 'S');
+
+        cout << "Genero/Categoria (superheroes, terror, ciencia ficcion, etc.): ";
+        getline(cin, genero);
+
+        inventario[posicionLibre] = new Comic(titulo, editorial, numeroEdicion, isbn,
+            precio, anioPublicacion, estadoConservacion,
+            esEdicionLimitada, genero);
+
+        cout << "\nComic registrado exitosamente en la posicion " << (posicionLibre + 1) << ".\n" << endl;
+    }
+    catch (ExcepcionInventarioLleno& e)
+    {
+        cout << "\n[Error] " << e.what() << "\n" << endl;
+    }
+    catch (ExcepcionIsbnDuplicado& e)
+    {
+        cout << "\n[Error] " << e.what() << "\n" << endl;
+    }
+    catch (ExcepcionDatoInvalido& e)
+    {
+        cout << "\n[Error] " << e.what() << "\n" << endl;
+    }
+}
+
+void mostrarComics(Comic* inventario[], int tamano)
+{
+    cout << "\n=== INVENTARIO DE COMICS ===" << endl;
+
+    bool hayComics = false;
+
+    for (int i = 0; i < tamano; i++)
+    {
+        if (inventario[i] != nullptr)
+        {
+            cout << "\nPosicion " << (i + 1) << ":" << endl;
+            inventario[i]->mostrarInformacion();
+            hayComics = true;
+        }
+    }
+
+    if (!hayComics)
+    {
+        cout << "\nEl inventario esta vacio, no hay comics registrados.\n" << endl;
+    }
+    else
+    {
+        cout << endl;
+    }
+}
+
+
+void buscarComic(Comic* inventario[], int tamano)
+{
+    int criterio;
+    string valorBusqueda;
+    bool encontrado = false;
+
+    cout << "\n--- Buscar comic ---" << endl;
+    cout << "Buscar por:" << endl;
+    cout << "1. Nombre (titulo)" << endl;
+    cout << "2. ISBN" << endl;
+    cout << "3. Editorial" << endl;
+    cout << "4. Numero de edicion" << endl;
+    criterio = leerEntero("Seleccione una opcion: ");
+
+    if (criterio < 1 || criterio > 4)
+    {
+        cout << "\nOpcion de busqueda invalida.\n" << endl;
+        return;
+    }
+
+    if (criterio == 4)
+    {
+        int numeroBuscado = leerEntero("Ingrese el numero de edicion a buscar: ");
+
+        for (int i = 0; i < tamano; i++)
+        {
+            if (inventario[i] != nullptr && inventario[i]->getNumeroEdicion() == numeroBuscado)
+            {
+                cout << "\nComic encontrado en la posicion " << (i + 1) << ":" << endl;
+                inventario[i]->mostrarInformacion();
+                encontrado = true;
+            }
+        }
+    }
+    else
+    {
+        cout << "Ingrese el valor a buscar: ";
+        getline(cin, valorBusqueda);
+
+        for (int i = 0; i < tamano; i++)
+        {
+            if (inventario[i] == nullptr)
+            {
+                continue;
+            }
+
+            bool coincide = false;
+
+            if (criterio == 1 && inventario[i]->getTitulo() == valorBusqueda)
+            {
+                coincide = true;
+            }
+            else if (criterio == 2 && inventario[i]->getIsbn() == valorBusqueda)
+            {
+                coincide = true;
+            }
+            else if (criterio == 3 && inventario[i]->getEditorial() == valorBusqueda)
+            {
+                coincide = true;
+            }
+
+            if (coincide)
+            {
+                cout << "\nComic encontrado en la posicion " << (i + 1) << ":" << endl;
+                inventario[i]->mostrarInformacion();
+                encontrado = true;
+            }
+        }
+    }
+
+    if (!encontrado)
+    {
+        cout << "\nNo se encontro ningun comic que coincida con ese criterio.\n" << endl;
+    }
+    else
+    {
+        cout << endl;
+    }
+}
+
+void eliminarComic(Comic* inventario[], int tamano)
+{
+    int criterio;
+    string valorBusqueda;
+    bool eliminadoAlgo = false;
+
+    cout << "\n--- Eliminar comic ---" << endl;
+    cout << "Eliminar por:" << endl;
+    cout << "1. Nombre (titulo)" << endl;
+    cout << "2. ISBN" << endl;
+    cout << "3. Editorial" << endl;
+    cout << "4. Numero de edicion" << endl;
+    criterio = leerEntero("Seleccione una opcion: ");
+
+    if (criterio < 1 || criterio > 4)
+    {
+        cout << "\nOpcion invalida.\n" << endl;
+        return;
+    }
+
+    int numeroBuscado = 0;
+    if (criterio == 4)
+    {
+        numeroBuscado = leerEntero("Ingrese el numero de edicion a eliminar: ");
+    }
+    else
+    {
+        cout << "Ingrese el valor a buscar: ";
+        getline(cin, valorBusqueda);
+    }
+
+    for (int i = 0; i < tamano; i++)
+    {
+        if (inventario[i] == nullptr)
+        {
+            continue;
+        }
+
+        bool coincide = false;
+
+        if (criterio == 1 && inventario[i]->getTitulo() == valorBusqueda)
+        {
+            coincide = true;
+        }
+        else if (criterio == 2 && inventario[i]->getIsbn() == valorBusqueda)
+        {
+            coincide = true;
+        }
+        else if (criterio == 3 && inventario[i]->getEditorial() == valorBusqueda)
+        {
+            coincide = true;
+        }
+        else if (criterio == 4 && inventario[i]->getNumeroEdicion() == numeroBuscado)
+        {
+            coincide = true;
+        }
+
+        if (coincide)
+        {
+            cout << "\nEliminando comic en la posicion " << (i + 1) << ": "
+                << inventario[i]->getTitulo() << endl;
+
+            delete inventario[i];
+            inventario[i] = nullptr;
+            eliminadoAlgo = true;
+        }
+    }
+
+    if (!eliminadoAlgo)
+    {
+        cout << "\nNo se encontro ningun comic que coincida con ese criterio.\n" << endl;
+    }
+    else
+    {
+        cout << "\nEliminacion completada.\n" << endl;
+    }
+}
+
+
+void liberarInventario(Comic* inventario[], int tamano)
+{
+    for (int i = 0; i < tamano; i++)
+    {
+        if (inventario[i] != nullptr)
+        {
+            delete inventario[i];
+            inventario[i] = nullptr;
+        }
+    }
+}
