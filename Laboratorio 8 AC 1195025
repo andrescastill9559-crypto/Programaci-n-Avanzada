@@ -1,0 +1,271 @@
+// Laboratorio 8 AC 1195025.cpp 
+
+#include <iostream>
+#include <string>
+#include <stdexcept>
+#include <cstdlib>
+
+using namespace std;
+
+
+// Excepcion personalizada
+
+class OperacionInvalidaException : public runtime_error
+{
+public:
+    explicit OperacionInvalidaException(const string& mensaje)
+        : runtime_error(mensaje)
+    {
+    }
+};
+
+
+// Funciones recursivas
+// 1. Calcular potencia
+int potencia(int base, int exponente)
+{
+    if (exponente < 0)
+    {
+        throw OperacionInvalidaException("El exponente no puede ser negativo.");
+    }
+
+    if (exponente == 0)
+    {
+        return 1;
+    }
+
+    return base * potencia(base, exponente - 1);
+}
+
+// 2. Contar digitos
+int contarDigitos(int n)
+{
+    if (n < 0)
+    {
+        throw OperacionInvalidaException("El numero debe ser entero positivo.");
+    }
+
+    if (n < 10)
+    {
+        return 1;
+    }
+
+    return 1 + contarDigitos(n / 10);
+}
+
+// 3. Invertir un numero
+int invertirNumero(int n, int invertido)
+{
+    if (n < 0)
+    {
+        throw OperacionInvalidaException("El numero debe ser entero positivo.");
+    }
+
+    if (n == 0)
+    {
+        return invertido;
+    }
+
+    return invertirNumero(n / 10, invertido * 10 + n % 10);
+}
+
+// 4. Sumar los digitos
+int sumaDigitos(int n)
+{
+    if (n < 0)
+    {
+        throw OperacionInvalidaException("El numero debe ser entero positivo.");
+    }
+
+    if (n == 0)
+    {
+        return 0;
+    }
+
+    return n % 10 + sumaDigitos(n / 10);
+}
+
+// 5. Obtener el digito mayor
+int digitoMayor(int n)
+{
+    if (n < 0)
+    {
+        throw OperacionInvalidaException("El numero debe ser entero positivo.");
+    }
+
+    if (n < 10)
+    {
+        return n;
+    }
+
+    int ultimoDigito = n % 10;
+    int mayorResto = digitoMayor(n / 10);
+
+    if (ultimoDigito > mayorResto)
+    {
+        return ultimoDigito;
+    }
+
+    return mayorResto;
+}
+
+
+
+int operarPotencia(int base, int exponente)
+{
+    return potencia(base, exponente);
+}
+
+int operarContarDigitos(int n, int noUsado)
+{
+    return contarDigitos(n);
+}
+
+int operarInvertirNumero(int n, int invertidoInicial)
+{
+    return invertirNumero(n, invertidoInicial);
+}
+
+int operarSumaDigitos(int n, int noUsado)
+{
+    return sumaDigitos(n);
+}
+
+int operarDigitoMayor(int n, int noUsado)
+{
+    return digitoMayor(n);
+}
+
+// Tipo de puntero a funcion utilizado por el arreglo
+typedef int (*FuncionRecursiva)(int, int);
+
+
+// Funciones auxiliares del menu
+
+
+void mostrarMenu()
+{
+    cout << "=================================" << endl;
+    cout << "     OPERACIONES RECURSIVAS" << endl;
+    cout << "=================================" << endl;
+    cout << "1. Calcular potencia" << endl;
+    cout << "2. Contar digitos" << endl;
+    cout << "3. Invertir numero" << endl;
+    cout << "4. Sumar digitos" << endl;
+    cout << "5. Obtener digito mayor" << endl;
+    cout << "6. Salir" << endl;
+    cout << "=================================" << endl;
+    cout << "Seleccione una opcion: ";
+}
+
+int main()
+{
+    // Arreglo de punteros a funciones con las cinco operaciones
+    FuncionRecursiva operaciones[5] =
+    {
+        operarPotencia,
+        operarContarDigitos,
+        operarInvertirNumero,
+        operarSumaDigitos,
+        operarDigitoMayor
+    };
+
+    int opcion = 0;
+
+    do
+    {
+        mostrarMenu();
+        cin >> opcion;
+
+        if (opcion < 1 || opcion > 6)
+        {
+            cout << "Opcion invalida. Intente de nuevo." << endl << endl;
+            continue;
+        }
+
+        if (opcion == 6)
+        {
+            cout << "Saliendo del programa..." << endl;
+            break;
+        }
+
+        try
+        {
+            int indice = opcion - 1;
+            int resultado = 0;
+
+            switch (opcion)
+            {
+            case 1:
+            {
+                int base = 0;
+                int exponente = 0;
+                cout << "Ingrese la base: ";
+                cin >> base;
+                cout << "Ingrese el exponente: ";
+                cin >> exponente;
+
+                resultado = operaciones[indice](base, exponente);
+                cout << "potencia(" << base << ", " << exponente << ") = " << resultado << endl;
+                break;
+            }
+            case 2:
+            {
+                int numero = 0;
+                cout << "Ingrese un numero entero positivo: ";
+                cin >> numero;
+
+                resultado = operaciones[indice](numero, 0);
+                cout << "contarDigitos(" << numero << ") = " << resultado << endl;
+                break;
+            }
+            case 3:
+            {
+                int numero = 0;
+                cout << "Ingrese un numero entero positivo: ";
+                cin >> numero;
+
+                resultado = operaciones[indice](numero, 0);
+                cout << numero << " -> " << resultado << endl;
+                break;
+            }
+            case 4:
+            {
+                int numero = 0;
+                cout << "Ingrese un numero entero positivo: ";
+                cin >> numero;
+
+                resultado = operaciones[indice](numero, 0);
+                cout << "sumaDigitos(" << numero << ") = " << resultado << endl;
+                break;
+            }
+            case 5:
+            {
+                int numero = 0;
+                cout << "Ingrese un numero entero positivo: ";
+                cin >> numero;
+
+                resultado = operaciones[indice](numero, 0);
+                cout << "digitoMayor(" << numero << ") = " << resultado << endl;
+                break;
+            }
+            default:
+                break;
+            }
+        }
+        catch (const OperacionInvalidaException& error)
+        {
+            cout << "Error: " << error.what() << endl;
+        }
+        catch (const exception& error)
+        {
+            cout << "Error inesperado: " << error.what() << endl;
+        }
+
+        cout << endl;
+
+    } while (opcion != 6);
+
+    system("pause");
+    return 0;
+}
