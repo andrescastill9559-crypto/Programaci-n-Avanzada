@@ -1,0 +1,983 @@
+// Mercato 2026 - Simulador de Transferencias de Futbol - Proyecto 1-b
+// Programacion Avanzada - Fase 2
+// Andres Castillo y Samuel Gonzalez 
+
+
+#include <iostream>
+#include <string>
+#include <vector>
+#include <stdexcept>
+#include <cstdlib>
+#include <ctime>
+
+using namespace std;
+
+
+// EXCEPCIONES PERSONALIZADAS
+
+
+class ExcepcionMercato : public runtime_error
+{
+public:
+    ExcepcionMercato(const string& mensaje) : runtime_error(mensaje)
+    {
+    }
+};
+
+class EntradaInvalidaException : public ExcepcionMercato
+{
+public:
+    EntradaInvalidaException(const string& mensaje) : ExcepcionMercato(mensaje)
+    {
+    }
+};
+
+class PresupuestoInsuficienteException : public ExcepcionMercato
+{
+public:
+    PresupuestoInsuficienteException(const string& mensaje) : ExcepcionMercato(mensaje)
+    {
+    }
+};
+
+class JugadorNoEncontradoException : public ExcepcionMercato
+{
+public:
+    JugadorNoEncontradoException(const string& mensaje) : ExcepcionMercato(mensaje)
+    {
+    }
+};
+
+
+// ENUM DE POSICIONES
+
+
+enum class Posicion
+{
+    PORTERO,
+    DEFENSA,
+    MEDIOCAMPISTA,
+    DELANTERO
+};
+
+
+// CLASE BASE ABSTRACTA: Jugador
+
+
+class Jugador
+{
+protected:
+    int id;
+    string nombre;
+    int valorMercado;
+    string clubActual;
+
+public:
+    Jugador(int id, const string& nombre, int valorMercado, const string& clubActual)
+    {
+        this->id = id;
+        this->nombre = nombre;
+        this->valorMercado = valorMercado;
+        this->clubActual = clubActual;
+    }
+
+    virtual ~Jugador()
+    {
+    }
+
+    int getId() const
+    {
+        return this->id;
+    }
+
+    string getNombre() const
+    {
+        return this->nombre;
+    }
+
+    int getValorMercado() const
+    {
+        return this->valorMercado;
+    }
+
+    string getClubActual() const
+    {
+        return this->clubActual;
+    }
+
+    void setValorMercado(int valorMercado)
+    {
+        if (valorMercado < 5)
+        {
+            valorMercado = 5;
+        }
+
+        this->valorMercado = valorMercado;
+    }
+
+    void setClubActual(const string& clubActual)
+    {
+        this->clubActual = clubActual;
+    }
+
+    virtual string mostrarDescripcion() const = 0;
+    virtual Posicion getPosicion() const = 0;
+};
+
+
+// CLASES DERIVADAS
+
+
+class Portero : public Jugador
+{
+public:
+    Portero(int id, const string& nombre, int valorMercado, const string& clubActual)
+        : Jugador(id, nombre, valorMercado, clubActual)
+    {
+    }
+
+    string mostrarDescripcion() const override
+    {
+        return this->getNombre() + " (Portero) - especialista en detener remates y iniciar la jugada desde el arco. Valor: "
+            + to_string(this->getValorMercado()) + "M EUR - Club: " + this->getClubActual();
+    }
+
+    Posicion getPosicion() const override
+    {
+        return Posicion::PORTERO;
+    }
+};
+
+class Defensa : public Jugador
+{
+public:
+    Defensa(int id, const string& nombre, int valorMercado, const string& clubActual)
+        : Jugador(id, nombre, valorMercado, clubActual)
+    {
+    }
+
+    string mostrarDescripcion() const override
+    {
+        return this->getNombre() + " (Defensa) - encargado de marcar rivales y despejar el balon. Valor: "
+            + to_string(this->getValorMercado()) + "M EUR - Club: " + this->getClubActual();
+    }
+
+    Posicion getPosicion() const override
+    {
+        return Posicion::DEFENSA;
+    }
+};
+
+class Mediocampista : public Jugador
+{
+public:
+    Mediocampista(int id, const string& nombre, int valorMercado, const string& clubActual)
+        : Jugador(id, nombre, valorMercado, clubActual)
+    {
+    }
+
+    string mostrarDescripcion() const override
+    {
+        return this->getNombre() + " (Mediocampista) - conecta defensa y ataque, controla el ritmo del partido. Valor: "
+            + to_string(this->getValorMercado()) + "M EUR - Club: " + this->getClubActual();
+    }
+
+    Posicion getPosicion() const override
+    {
+        return Posicion::MEDIOCAMPISTA;
+    }
+};
+
+class Delantero : public Jugador
+{
+public:
+    Delantero(int id, const string& nombre, int valorMercado, const string& clubActual)
+        : Jugador(id, nombre, valorMercado, clubActual)
+    {
+    }
+
+    string mostrarDescripcion() const override
+    {
+        return this->getNombre() + " (Delantero) - responsable principal de convertir goles. Valor: "
+            + to_string(this->getValorMercado()) + "M EUR - Club: " + this->getClubActual();
+    }
+
+    Posicion getPosicion() const override
+    {
+        return Posicion::DELANTERO;
+    }
+};
+
+
+// STRUCTS AUXILIARES (coinciden con el diagrama de clases)
+
+
+struct Club
+{
+    int id;
+    string nombre;
+    int presupuesto;
+    vector<Jugador*> jugadores;
+};
+
+struct Oferta
+{
+    int id;
+    Jugador* jugador;
+    int idClubComprador;
+    int idClubVendedor;
+    int monto;
+    string estado; // "pendiente", "aceptada", "rechazada"
+};
+
+struct Transferencia
+{
+    int dia;
+    Jugador* jugador;
+    string origen;
+    string destino;
+    int montoPagado;
+};
+
+
+// VALIDACION DE ENTRADA (reutilizable, no rompe el programa)
+
+
+int leerEnteroValidado(const string& mensaje, int minimo, int maximo)
+{
+    int valor;
+
+    while (true)
+    {
+        cout << mensaje;
+        cin >> valor;
+
+        if (cin.fail())
+        {
+            cin.clear();
+            cin.ignore(10000, '\n');
+            cout << "Entrada invalida, debes ingresar un numero.\n";
+            continue;
+        }
+
+        if (valor < minimo || valor > maximo)
+        {
+            cout << "El valor debe estar entre " << minimo << " y " << maximo << ".\n";
+            continue;
+        }
+
+        return valor;
+    }
+}
+
+
+// CLASE SimuladorMercado
+
+class SimuladorMercado
+{
+private:
+    vector<Club> clubes;
+    vector<Jugador*> todosLosJugadores;
+    vector<Oferta> ofertas;
+    vector<Transferencia> historial;
+
+    int idClubUsuario;
+    int diaActual;
+    int diasSimulacion;
+    int siguienteIdOferta;
+
+    int presupuestoInicialUsuario;
+    vector<string> plantillaInicialUsuario;
+
+    int totalGastado;
+    int totalRecibido;
+    int ofertasAceptadas;
+    int ofertasRechazadas;
+    vector<string> jugadoresComprados;
+    vector<string> jugadoresVendidos;
+
+
+    // Helpers privados
+
+
+    int indiceClubUsuario() const
+    {
+        for (size_t i = 0; i < this->clubes.size(); i++)
+        {
+            if (this->clubes[i].id == this->idClubUsuario)
+            {
+                return static_cast<int>(i);
+            }
+        }
+
+        throw ExcepcionMercato("No se encontro el club del usuario.");
+    }
+
+    int indiceClubPorId(int idClub) const
+    {
+        for (size_t i = 0; i < this->clubes.size(); i++)
+        {
+            if (this->clubes[i].id == idClub)
+            {
+                return static_cast<int>(i);
+            }
+        }
+
+        return -1;
+    }
+
+    int valorAleatorioPorPosicion(Posicion posicion) const
+    {
+        switch (posicion)
+        {
+        case Posicion::PORTERO:
+            return 20 + (rand() % (70 - 20 + 1));
+        case Posicion::DEFENSA:
+            return 25 + (rand() % (90 - 25 + 1));
+        case Posicion::MEDIOCAMPISTA:
+            return 30 + (rand() % (110 - 30 + 1));
+        case Posicion::DELANTERO:
+            return 35 + (rand() % (140 - 35 + 1));
+        default:
+            return 20;
+        }
+    }
+
+    Jugador* crearJugadorPorPosicion(int id, const string& nombre, Posicion posicion, const string& club)
+    {
+        int valor = this->valorAleatorioPorPosicion(posicion);
+
+        switch (posicion)
+        {
+        case Posicion::PORTERO:
+            return new Portero(id, nombre, valor, club);
+        case Posicion::DEFENSA:
+            return new Defensa(id, nombre, valor, club);
+        case Posicion::MEDIOCAMPISTA:
+            return new Mediocampista(id, nombre, valor, club);
+        case Posicion::DELANTERO:
+            return new Delantero(id, nombre, valor, club);
+        default:
+            throw ExcepcionMercato("Posicion desconocida al crear jugador.");
+        }
+    }
+
+    Jugador* buscarJugadorPorId(int idJugador, int* idClubDueno = nullptr) const
+    {
+        for (size_t c = 0; c < this->clubes.size(); c++)
+        {
+            for (size_t j = 0; j < this->clubes[c].jugadores.size(); j++)
+            {
+                if (this->clubes[c].jugadores[j]->getId() == idJugador)
+                {
+                    if (idClubDueno != nullptr)
+                    {
+                        *idClubDueno = this->clubes[c].id;
+                    }
+
+                    return this->clubes[c].jugadores[j];
+                }
+            }
+        }
+
+        return nullptr;
+    }
+
+    int contarJugadoresPorPosicion(const Club& club, Posicion posicion) const
+    {
+        int contador = 0;
+
+        for (size_t i = 0; i < club.jugadores.size(); i++)
+        {
+            if (club.jugadores[i]->getPosicion() == posicion)
+            {
+                contador++;
+            }
+        }
+
+        return contador;
+    }
+
+    void moverJugadorEntreClubes(Jugador* jugador, int idClubOrigen, int idClubDestino, int monto, int dia)
+    {
+        Club* clubOrigen = nullptr;
+        Club* clubDestino = nullptr;
+
+        for (size_t i = 0; i < this->clubes.size(); i++)
+        {
+            if (this->clubes[i].id == idClubOrigen)
+            {
+                clubOrigen = &this->clubes[i];
+            }
+
+            if (this->clubes[i].id == idClubDestino)
+            {
+                clubDestino = &this->clubes[i];
+            }
+        }
+
+        if (clubOrigen == nullptr || clubDestino == nullptr)
+        {
+            throw ExcepcionMercato("Club origen o destino no encontrado al transferir.");
+        }
+
+        for (size_t i = 0; i < clubOrigen->jugadores.size(); i++)
+        {
+            if (clubOrigen->jugadores[i]->getId() == jugador->getId())
+            {
+                clubOrigen->jugadores.erase(clubOrigen->jugadores.begin() + i);
+                break;
+            }
+        }
+
+        clubOrigen->presupuesto += monto;
+        clubDestino->presupuesto -= monto;
+
+        jugador->setClubActual(clubDestino->nombre);
+        clubDestino->jugadores.push_back(jugador);
+
+        Transferencia transferencia;
+        transferencia.dia = dia;
+        transferencia.jugador = jugador;
+        transferencia.origen = clubOrigen->nombre;
+        transferencia.destino = clubDestino->nombre;
+        transferencia.montoPagado = monto;
+        this->historial.push_back(transferencia);
+    }
+
+    void solicitarClubUsuario()
+    {
+        cout << "\n---- Elige el club que vas a administrar ----\n";
+
+        for (size_t i = 0; i < this->clubes.size(); i++)
+        {
+            cout << this->clubes[i].id << ". " << this->clubes[i].nombre << "\n";
+        }
+
+        int eleccion = leerEnteroValidado("Ingresa el numero del club: ", 1, static_cast<int>(this->clubes.size()));
+
+        this->idClubUsuario = eleccion;
+
+        int indice = this->indiceClubUsuario();
+        this->presupuestoInicialUsuario = this->clubes[indice].presupuesto;
+
+        for (size_t i = 0; i < this->clubes[indice].jugadores.size(); i++)
+        {
+            this->plantillaInicialUsuario.push_back(this->clubes[indice].jugadores[i]->getNombre());
+        }
+    }
+
+    void solicitarDiasSimulacion()
+    {
+        this->diasSimulacion = leerEnteroValidado("Ingresa la cantidad de dias de simulacion (5 a 15): ", 5, 15);
+    }
+
+    void mostrarConfiguracionInicial() const
+    {
+        cout << "\n==================== CONFIGURACION INICIAL ====================\n";
+
+        for (size_t i = 0; i < this->clubes.size(); i++)
+        {
+            const Club& club = this->clubes[i];
+            cout << "\nClub: " << club.nombre << " (Presupuesto: " << club.presupuesto << "M EUR)";
+
+            if (club.id == this->idClubUsuario)
+            {
+                cout << "  <-- tu club";
+            }
+
+            cout << "\n";
+
+            for (size_t j = 0; j < club.jugadores.size(); j++)
+            {
+                cout << "  [" << club.jugadores[j]->getId() << "] "
+                    << club.jugadores[j]->mostrarDescripcion() << "\n";
+            }
+        }
+
+        cout << "\nDias de simulacion: " << this->diasSimulacion << "\n";
+        cout << "=================================================================\n";
+    }
+
+public:
+    SimuladorMercado()
+    {
+        this->idClubUsuario = -1;
+        this->diaActual = 0;
+        this->diasSimulacion = 0;
+        this->siguienteIdOferta = 1;
+        this->presupuestoInicialUsuario = 0;
+        this->totalGastado = 0;
+        this->totalRecibido = 0;
+        this->ofertasAceptadas = 0;
+        this->ofertasRechazadas = 0;
+        srand(static_cast<unsigned int>(time(nullptr)));
+    }
+
+    ~SimuladorMercado()
+    {
+        this->liberarMemoria();
+    }
+
+    void liberarMemoria()
+    {
+        for (size_t i = 0; i < this->todosLosJugadores.size(); i++)
+        {
+            delete this->todosLosJugadores[i];
+        }
+
+        this->todosLosJugadores.clear();
+    }
+
+
+    // crearJugadores(): crea los 6 clubes con sus 5 jugadores reales
+
+
+    void crearJugadores()
+    {
+        string nombresClubes[6] = {
+            "Real Madrid", "FC Barcelona", "Manchester City",
+            "Liverpool", "Bayern Munich", "Paris Saint-Germain"
+        };
+
+        // Jugadores reales, temporada 2025-26. Orden por club:
+        // Portero, Defensa, Mediocampista, Delantero, Quinto (libre)
+        string nombresJugadores[6][5] = {
+            {"Thibaut Courtois", "Eder Militao", "Jude Bellingham", "Kylian Mbappe", "Federico Valverde"},
+            {"Joan Garcia", "Pau Cubarsi", "Pedri", "Robert Lewandowski", "Lamine Yamal"},
+            {"Gianluigi Donnarumma", "Ruben Dias", "Rodri", "Erling Haaland", "Phil Foden"},
+            {"Alisson Becker", "Virgil van Dijk", "Dominik Szoboszlai", "Mohamed Salah", "Florian Wirtz"},
+            {"Manuel Neuer", "Jonathan Tah", "Michael Olise", "Harry Kane", "Luis Diaz"},
+            {"Lucas Chevalier", "Marquinhos", "Vitinha", "Ousmane Dembele", "Achraf Hakimi"}
+        };
+
+        Posicion posicionesBase[5] = {
+            Posicion::PORTERO, Posicion::DEFENSA, Posicion::MEDIOCAMPISTA,
+            Posicion::DELANTERO, Posicion::MEDIOCAMPISTA
+        };
+
+        int idJugadorGlobal = 1;
+
+        for (int c = 0; c < 6; c++)
+        {
+            Club nuevoClub;
+            nuevoClub.id = c + 1;
+            nuevoClub.nombre = nombresClubes[c];
+            nuevoClub.presupuesto = 100 + (rand() % (200 - 100 + 1));
+
+            for (int j = 0; j < 5; j++)
+            {
+                Jugador* nuevoJugador = this->crearJugadorPorPosicion(
+                    idJugadorGlobal, nombresJugadores[c][j], posicionesBase[j], nuevoClub.nombre);
+
+                nuevoClub.jugadores.push_back(nuevoJugador);
+                this->todosLosJugadores.push_back(nuevoJugador);
+                idJugadorGlobal++;
+            }
+
+            this->clubes.push_back(nuevoClub);
+        }
+    }
+
+
+    // iniciarPartida(): orquesta toda la configuracion inicial
+
+
+    void iniciarPartida()
+    {
+        this->crearJugadores();
+        this->solicitarClubUsuario();
+        this->solicitarDiasSimulacion();
+        this->mostrarConfiguracionInicial();
+    }
+
+
+    // OPCIONES DEL MENU DIARIO
+
+
+    void mostrarMenu() const
+    {
+        cout << "\n---- Mercato 2026: menu del dia ----\n";
+        cout << "1. Ver mi club\n";
+        cout << "2. Explorar jugadores\n";
+        cout << "3. Realizar una oferta\n";
+        cout << "4. Revisar ofertas recibidas\n";
+        cout << "5. Ver historial\n";
+        cout << "6. Avanzar de dia\n";
+    }
+
+    void verClub(int idClub) const
+    {
+        int indice = this->indiceClubPorId(idClub);
+
+        if (indice < 0)
+        {
+            throw JugadorNoEncontradoException("No existe un club con ese identificador.");
+        }
+
+        const Club& club = this->clubes[indice];
+
+        cout << "\n---- " << club.nombre << " ----\n";
+        cout << "Presupuesto disponible: " << club.presupuesto << "M EUR\n";
+        cout << "Plantilla:\n";
+
+        for (size_t i = 0; i < club.jugadores.size(); i++)
+        {
+            cout << "  [" << club.jugadores[i]->getId() << "] "
+                << club.jugadores[i]->mostrarDescripcion() << "\n";
+        }
+    }
+
+    void explorarJugadores() const
+    {
+        cout << "\n---- Explorar jugadores ----\n";
+        cout << "1. Ver todos\n";
+        cout << "2. Filtrar por posicion\n";
+        cout << "3. Buscar por identificador\n";
+
+        int opcion = leerEnteroValidado("Elige una opcion: ", 1, 3);
+
+        bool seEncontroAlguno = false;
+
+        if (opcion == 1)
+        {
+            for (size_t c = 0; c < this->clubes.size(); c++)
+            {
+                if (this->clubes[c].id == this->idClubUsuario)
+                {
+                    continue;
+                }
+
+                for (size_t j = 0; j < this->clubes[c].jugadores.size(); j++)
+                {
+                    cout << "  [" << this->clubes[c].jugadores[j]->getId() << "] "
+                        << this->clubes[c].jugadores[j]->mostrarDescripcion() << "\n";
+                    seEncontroAlguno = true;
+                }
+            }
+        }
+        else if (opcion == 2)
+        {
+            cout << "1. Portero  2. Defensa  3. Mediocampista  4. Delantero\n";
+            int opcionPos = leerEnteroValidado("Elige la posicion: ", 1, 4);
+            Posicion posicionBuscada = static_cast<Posicion>(opcionPos - 1);
+
+            for (size_t c = 0; c < this->clubes.size(); c++)
+            {
+                if (this->clubes[c].id == this->idClubUsuario)
+                {
+                    continue;
+                }
+
+                for (size_t j = 0; j < this->clubes[c].jugadores.size(); j++)
+                {
+                    if (this->clubes[c].jugadores[j]->getPosicion() == posicionBuscada)
+                    {
+                        cout << "  [" << this->clubes[c].jugadores[j]->getId() << "] "
+                            << this->clubes[c].jugadores[j]->mostrarDescripcion() << "\n";
+                        seEncontroAlguno = true;
+                    }
+                }
+            }
+        }
+        else
+        {
+            int idBuscado = leerEnteroValidado("Ingresa el identificador del jugador: ", 1, 999);
+            int idClubDueno = -1;
+            Jugador* jugador = this->buscarJugadorPorId(idBuscado, &idClubDueno);
+
+            if (jugador != nullptr && idClubDueno != this->idClubUsuario)
+            {
+                cout << "  [" << jugador->getId() << "] " << jugador->mostrarDescripcion() << "\n";
+                seEncontroAlguno = true;
+            }
+        }
+
+        if (!seEncontroAlguno)
+        {
+            cout << "No se encontraron jugadores con ese criterio.\n";
+        }
+    }
+
+    void realizarOferta(int idJugador, int monto)
+    {
+        int idClubDueno = -1;
+        Jugador* jugador = this->buscarJugadorPorId(idJugador, &idClubDueno);
+
+        if (jugador == nullptr)
+        {
+            throw JugadorNoEncontradoException("No existe un jugador con ese identificador.");
+        }
+
+        if (idClubDueno == this->idClubUsuario)
+        {
+            throw EntradaInvalidaException("No puedes ofertar por un jugador de tu propio club.");
+        }
+
+        Oferta nuevaOferta;
+        nuevaOferta.id = this->siguienteIdOferta++;
+        nuevaOferta.jugador = jugador;
+        nuevaOferta.idClubComprador = this->idClubUsuario;
+        nuevaOferta.idClubVendedor = idClubDueno;
+        nuevaOferta.monto = monto;
+        nuevaOferta.estado = "pendiente";
+
+        this->ofertas.push_back(nuevaOferta);
+
+        cout << "Oferta registrada. Se resolvera al avanzar de dia.\n";
+    }
+
+    void revisarOfertasRecibidas()
+    {
+        int indice = this->indiceClubUsuario();
+        Club& miClub = this->clubes[indice];
+
+        if (miClub.jugadores.empty())
+        {
+            cout << "No tienes jugadores para recibir ofertas.\n";
+            return;
+        }
+
+        int posicionAleatoria = rand() % static_cast<int>(miClub.jugadores.size());
+        Jugador* jugadorOfertado = miClub.jugadores[posicionAleatoria];
+
+        int idClubComprador;
+
+        do
+        {
+            idClubComprador = this->clubes[rand() % this->clubes.size()].id;
+        } while (idClubComprador == this->idClubUsuario);
+
+        int porcentaje = 90 + (rand() % (130 - 90 + 1));
+        int monto = (jugadorOfertado->getValorMercado() * porcentaje) / 100;
+
+        cout << "\nOferta recibida por " << jugadorOfertado->getNombre()
+            << " (valor actual " << jugadorOfertado->getValorMercado() << "M): " << monto << "M EUR.\n";
+
+        int opcion = leerEnteroValidado("1. Aceptar   2. Rechazar: ", 1, 2);
+
+        if (opcion == 1)
+        {
+            if (this->contarJugadoresPorPosicion(miClub, jugadorOfertado->getPosicion()) <= 1)
+            {
+                cout << "No puedes aceptar: te quedarias sin jugadores en esa posicion.\n";
+                this->ofertasRechazadas++;
+                return;
+            }
+
+            this->moverJugadorEntreClubes(jugadorOfertado, this->idClubUsuario, idClubComprador, monto, this->diaActual);
+            this->totalRecibido += monto;
+            this->jugadoresVendidos.push_back(jugadorOfertado->getNombre());
+            this->ofertasAceptadas++;
+            cout << "Oferta aceptada. Presupuesto actualizado.\n";
+        }
+        else
+        {
+            this->ofertasRechazadas++;
+            cout << "Oferta rechazada.\n";
+        }
+    }
+
+    void verHistorial() const
+    {
+        if (this->historial.empty())
+        {
+            cout << "Aun no hay transferencias registradas.\n";
+            return;
+        }
+
+        cout << "\n---- Historial de transferencias ----\n";
+
+        for (size_t i = 0; i < this->historial.size(); i++)
+        {
+            const Transferencia& t = this->historial[i];
+            cout << "Dia " << t.dia << ": " << t.jugador->getNombre() << " | "
+                << t.origen << " -> " << t.destino << " | " << t.montoPagado << "M EUR\n";
+        }
+    }
+
+    void avanzarDia()
+    {
+        for (size_t i = 0; i < this->ofertas.size(); i++)
+        {
+            Oferta& oferta = this->ofertas[i];
+
+            if (oferta.estado != "pendiente")
+            {
+                continue;
+            }
+
+            int valorActual = oferta.jugador->getValorMercado();
+            int minimoAceptable = (valorActual * 110) / 100;
+
+            int indiceClubVendedor = this->indiceClubPorId(oferta.idClubVendedor);
+            int indiceClubComprador = this->indiceClubUsuario();
+
+            bool tienePresupuesto = this->clubes[indiceClubComprador].presupuesto >= oferta.monto;
+            bool clubQuedariaSinPosicion =
+                (indiceClubVendedor >= 0)
+                && (this->contarJugadoresPorPosicion(this->clubes[indiceClubVendedor], oferta.jugador->getPosicion()) <= 1);
+
+            if (oferta.monto < minimoAceptable)
+            {
+                oferta.estado = "rechazada";
+                this->ofertasRechazadas++;
+                cout << "Tu oferta por " << oferta.jugador->getNombre() << " fue rechazada (monto insuficiente).\n";
+            }
+            else if (!tienePresupuesto)
+            {
+                oferta.estado = "rechazada";
+                this->ofertasRechazadas++;
+                cout << "Tu oferta por " << oferta.jugador->getNombre() << " no se pudo completar: presupuesto insuficiente.\n";
+            }
+            else if (clubQuedariaSinPosicion)
+            {
+                oferta.estado = "rechazada";
+                this->ofertasRechazadas++;
+                cout << "Tu oferta por " << oferta.jugador->getNombre() << " fue rechazada: el club vendedor se quedaria sin jugadores en esa posicion.\n";
+            }
+            else
+            {
+                oferta.estado = "aceptada";
+                this->ofertasAceptadas++;
+                this->totalGastado += oferta.monto;
+                this->jugadoresComprados.push_back(oferta.jugador->getNombre());
+
+                this->moverJugadorEntreClubes(oferta.jugador, oferta.idClubVendedor, oferta.idClubComprador, oferta.monto, this->diaActual);
+
+                cout << "Tu oferta por " << oferta.jugador->getNombre() << " fue aceptada.\n";
+            }
+        }
+
+        for (size_t i = 0; i < this->todosLosJugadores.size(); i++)
+        {
+            Jugador* jugador = this->todosLosJugadores[i];
+            int variacion = (rand() % 11) - 5; // -5 a +5
+            int nuevoValor = jugador->getValorMercado() + (jugador->getValorMercado() * variacion) / 100;
+
+            jugador->setValorMercado(nuevoValor);
+        }
+
+        this->diaActual++;
+        cout << "\n>> Avanzaste al dia " << this->diaActual << " de " << this->diasSimulacion << ".\n";
+    }
+
+    void generarReporteFinal() const
+    {
+        int indice = this->indiceClubUsuario();
+        const Club& club = this->clubes[indice];
+
+        cout << "\n==================== REPORTE FINAL ====================\n";
+
+        cout << "\nPlantilla inicial:\n";
+        for (size_t i = 0; i < this->plantillaInicialUsuario.size(); i++)
+        {
+            cout << "  - " << this->plantillaInicialUsuario[i] << "\n";
+        }
+
+        cout << "\nPlantilla final:\n";
+        for (size_t i = 0; i < club.jugadores.size(); i++)
+        {
+            cout << "  - " << club.jugadores[i]->getNombre() << "\n";
+        }
+
+        cout << "\nPresupuesto inicial: " << this->presupuestoInicialUsuario << "M EUR\n";
+        cout << "Presupuesto disponible: " << club.presupuesto << "M EUR\n";
+        cout << "Total gastado en compras: " << this->totalGastado << "M EUR\n";
+        cout << "Total recibido por ventas: " << this->totalRecibido << "M EUR\n";
+
+        cout << "\nJugadores comprados: " << this->jugadoresComprados.size() << "\n";
+        for (size_t i = 0; i < this->jugadoresComprados.size(); i++)
+        {
+            cout << "  - " << this->jugadoresComprados[i] << "\n";
+        }
+
+        cout << "\nJugadores vendidos: " << this->jugadoresVendidos.size() << "\n";
+        for (size_t i = 0; i < this->jugadoresVendidos.size(); i++)
+        {
+            cout << "  - " << this->jugadoresVendidos[i] << "\n";
+        }
+
+        cout << "\nOfertas aceptadas: " << this->ofertasAceptadas << "\n";
+        cout << "Ofertas rechazadas: " << this->ofertasRechazadas << "\n";
+
+        this->verHistorial();
+
+        cout << "\n=========================================================\n";
+    }
+
+    bool simulacionTerminada() const
+    {
+        return this->diaActual >= this->diasSimulacion;
+    }
+
+    int getIdClubUsuario() const
+    {
+        return this->idClubUsuario;
+    }
+};
+
+
+// MAIN
+
+
+int main()
+{
+    SimuladorMercado simulador;
+
+    try
+    {
+        simulador.iniciarPartida();
+
+        while (!simulador.simulacionTerminada())
+        {
+            simulador.mostrarMenu();
+
+            try
+            {
+                int opcion = leerEnteroValidado("Elige una opcion: ", 1, 6);
+
+                switch (opcion)
+                {
+                case 1:
+                    simulador.verClub(simulador.getIdClubUsuario());
+                    break;
+                case 2:
+                    simulador.explorarJugadores();
+                    break;
+                case 3:
+                {
+                    int idJugador = leerEnteroValidado("Ingresa el identificador del jugador que quieres ofertar: ", 1, 999);
+                    int monto = leerEnteroValidado("Ingresa el monto que deseas ofrecer (millones EUR): ", 1, 1000);
+                    simulador.realizarOferta(idJugador, monto);
+                    break;
+                }
+                case 4:
+                    simulador.revisarOfertasRecibidas();
+                    break;
+                case 5:
+                    simulador.verHistorial();
+                    break;
+                case 6:
+                    simulador.avanzarDia();
+                    break;
+                default:
+                    cout << "Opcion no valida, intenta de nuevo.\n";
+                    break;
+                }
+            }
+            catch (const ExcepcionMercato& error)
+            {
+                cout << "Error: " << error.what() << "\n";
+            }
+        }
+
+        simulador.generarReporteFinal();
+    }
+    catch (const exception& errorFatal)
+    {
+        cout << "Error inesperado: " << errorFatal.what() << "\n";
+    }
+
+    return 0;
+}
