@@ -1,0 +1,277 @@
+// Laboratorio 9 AC 1195025.cpp 
+
+
+#include <iostream>
+#include <string>
+#include <stdexcept>
+#include <cctype>
+
+using namespace std;
+
+
+// Excepciones personalizadas
+
+class ExcepcionValorInvalido : public runtime_error
+{
+public:
+    ExcepcionValorInvalido(const string& mensaje)
+        : runtime_error(mensaje)
+    {
+        this->mensaje = mensaje;
+    }
+
+    string obtenerMensaje() const
+    {
+        return this->mensaje;
+    }
+
+private:
+    string mensaje;
+};
+
+class ExcepcionCadenaInvalida : public runtime_error
+{
+public:
+    ExcepcionCadenaInvalida(const string& mensaje)
+        : runtime_error(mensaje)
+    {
+        this->mensaje = mensaje;
+    }
+
+    string obtenerMensaje() const
+    {
+        return this->mensaje;
+    }
+
+private:
+    string mensaje;
+};
+
+// Ejercicio 1: Resistencia equivalente de una red en escalera
+
+
+double resistenciaEquivalente(double resistenciaSerie, double resistenciaParalelo, int numeroEtapas)
+{
+    if (resistenciaSerie <= 0 || resistenciaParalelo <= 0)
+    {
+        throw ExcepcionValorInvalido("Las resistencias Rs y Rp deben ser valores positivos.");
+    }
+
+    if (numeroEtapas <= 0)
+    {
+        throw ExcepcionValorInvalido("El numero de etapas debe ser mayor a cero.");
+    }
+
+    
+    if (numeroEtapas == 1)
+    {
+        double resultado = resistenciaSerie + resistenciaParalelo;
+        cout << "  Etapa 1 (caso base): R_eq(1) = Rs + Rp = "
+            << resistenciaSerie << " + " << resistenciaParalelo
+            << " = " << resultado << " ohm" << endl;
+        return resultado;
+    }
+
+    double resistenciaAnterior = resistenciaEquivalente(resistenciaSerie, resistenciaParalelo, numeroEtapas - 1);
+    double resultado = resistenciaSerie
+        + (resistenciaParalelo * resistenciaAnterior) / (resistenciaParalelo + resistenciaAnterior);
+
+    cout << "  Etapa " << numeroEtapas << ": R_eq(" << numeroEtapas
+        << ") = Rs + (Rp * R_eq(" << numeroEtapas - 1 << ")) / (Rp + R_eq(" << numeroEtapas - 1 << "))" << endl;
+    cout << "  Etapa " << numeroEtapas << ": R_eq(" << numeroEtapas << ") = "
+        << resistenciaSerie << " + (" << resistenciaParalelo << " * " << resistenciaAnterior
+        << ") / (" << resistenciaParalelo << " + " << resistenciaAnterior
+        << ") = " << resultado << " ohm" << endl;
+
+    return resultado;
+}
+
+
+// Ejercicio 2: Verificacion de palabra palindroma (recursivo)
+
+
+bool esPalindromaRecursivo(const string& palabra, int inicio, int fin)
+{
+    if (inicio >= fin)
+    {
+        return true;
+    }
+
+    if (palabra[inicio] != palabra[fin])
+    {
+        return false;
+    }
+
+    return esPalindromaRecursivo(palabra, inicio + 1, fin - 1);
+}
+
+bool esPalindroma(const string& palabra)
+{
+    if (palabra.empty())
+    {
+        throw ExcepcionCadenaInvalida("La palabra no puede estar vacia.");
+    }
+
+    for (char caracter : palabra)
+    {
+        if (!isalpha(static_cast<unsigned char>(caracter)))
+        {
+            throw ExcepcionCadenaInvalida("La palabra solo debe contener letras.");
+        }
+    }
+
+    string palabraMinuscula = palabra;
+    for (size_t i = 0; i < palabraMinuscula.size(); i++)
+    {
+        palabraMinuscula[i] = static_cast<char>(tolower(static_cast<unsigned char>(palabraMinuscula[i])));
+    }
+
+    return esPalindromaRecursivo(palabraMinuscula, 0, static_cast<int>(palabraMinuscula.size()) - 1);
+}
+
+
+// Funciones auxiliares de entrada validada
+
+
+double leerDoublePositivo(const string& mensaje)
+{
+    double valor;
+    while (true)
+    {
+        cout << mensaje;
+        cin >> valor;
+
+        if (cin.fail())
+        {
+            cin.clear();
+            cin.ignore(10000, '\n');
+            cout << "Entrada invalida. Ingrese un numero." << endl;
+            continue;
+        }
+
+        if (valor <= 0)
+        {
+            cout << "El valor debe ser positivo." << endl;
+            continue;
+        }
+
+        return valor;
+    }
+}
+
+int leerEnteroPositivo(const string& mensaje)
+{
+    int valor;
+    while (true)
+    {
+        cout << mensaje;
+        cin >> valor;
+
+        if (cin.fail())
+        {
+            cin.clear();
+            cin.ignore(10000, '\n');
+            cout << "Entrada invalida. Ingrese un numero entero." << endl;
+            continue;
+        }
+
+        if (valor <= 0)
+        {
+            cout << "El valor debe ser mayor a cero." << endl;
+            continue;
+        }
+
+        return valor;
+    }
+}
+
+
+// Programa principal
+
+void ejecutarEjercicioResistencia()
+{
+    cout << "\n--- Resistencia equivalente de una red en escalera ---" << endl;
+
+    double resistenciaSerie = leerDoublePositivo("Ingrese Rs (resistencia en serie, ohm): ");
+    double resistenciaParalelo = leerDoublePositivo("Ingrese Rp (resistencia en paralelo, ohm): ");
+    int numeroEtapas = leerEnteroPositivo("Ingrese el numero de etapas (n): ");
+
+    try
+    {
+        cout << "\nPasos de la recursion:" << endl;
+        double resultado = resistenciaEquivalente(resistenciaSerie, resistenciaParalelo, numeroEtapas);
+        cout << "\nResistencia equivalente total: " << resultado << " ohm" << endl;
+    }
+    catch (ExcepcionValorInvalido& error)
+    {
+        cout << "Error: " << error.obtenerMensaje() << endl;
+    }
+}
+
+void ejecutarEjercicioPalindroma()
+{
+    cout << "\n--- Verificacion de palabra palindroma ---" << endl;
+
+    string palabra;
+    cout << "Ingrese una palabra: ";
+    cin >> palabra;
+
+    try
+    {
+        if (esPalindroma(palabra))
+        {
+            cout << "\"" << palabra << "\" es palindroma." << endl;
+        }
+        else
+        {
+            cout << "\"" << palabra << "\" no es palindroma." << endl;
+        }
+    }
+    catch (ExcepcionCadenaInvalida& error)
+    {
+        cout << "Error: " << error.obtenerMensaje() << endl;
+    }
+}
+
+int main()
+{
+    int opcion = 0;
+
+    do
+    {
+        cout << "\n============================================" << endl;
+        cout << " LABORATORIO 09 - RECURSIVIDAD" << endl;
+        cout << "============================================" << endl;
+        cout << "1. Resistencia equivalente (red en escalera)" << endl;
+        cout << "2. Verificar si una palabra es palindroma" << endl;
+        cout << "3. Salir" << endl;
+        cout << "Seleccione una opcion: ";
+        cin >> opcion;
+
+        if (cin.fail())
+        {
+            cin.clear();
+            cin.ignore(10000, '\n');
+            cout << "Opcion invalida." << endl;
+            continue;
+        }
+
+        switch (opcion)
+        {
+        case 1:
+            ejecutarEjercicioResistencia();
+            break;
+        case 2:
+            ejecutarEjercicioPalindroma();
+            break;
+        case 3:
+            cout << "Fin del programa." << endl;
+            break;
+        default:
+            cout << "Opcion invalida." << endl;
+        }
+
+    } while (opcion != 3);
+
+    return 0;
+}
