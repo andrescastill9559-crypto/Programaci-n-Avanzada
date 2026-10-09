@@ -1,0 +1,318 @@
+// Laboratorio 11 AC1195025.cpp 
+
+#include <iostream>
+#include <iomanip>
+#include <string>
+#include <limits>
+using namespace std;
+
+// Clase Actividad
+
+class Actividad {
+public:
+    string nombre;
+    string descripcion;
+    int hora; // 0-23
+
+    Actividad() : nombre(""), descripcion(""), hora(0) {}
+    Actividad(string n, string d, int h) : nombre(n), descripcion(d), hora(h) {}
+};
+
+// Formatea la hora como HH:00
+string formatoHora(int h) {
+    string s = (h < 10 ? "0" : "") + to_string(h);
+    return s + ":00";
+}
+
+
+// Clase NodoCircular
+
+class NodoCircular {
+public:
+    Actividad actividad;
+    NodoCircular* anterior;
+    NodoCircular* siguiente;
+
+    NodoCircular(const Actividad& a) : actividad(a), anterior(nullptr), siguiente(nullptr) {}
+};
+
+
+// Clase RelojActividades
+
+class RelojActividades {
+private:
+    NodoCircular* cabeza;  
+    NodoCircular* actual;  
+    int horaActual;        
+    int cantidad;
+
+
+    NodoCircular* bloqueDeHora(int hora) const {
+        if (cabeza == nullptr) return nullptr;
+        NodoCircular* candidato = cabeza->anterior; 
+        NodoCircular* n = cabeza;
+        do {
+            if (n->actividad.hora <= hora) candidato = n;
+            else break; 
+            n = n->siguiente;
+        } while (n != cabeza);
+        return candidato;
+    }
+
+    NodoCircular* encontrarPorHora(int hora) const {
+        if (cabeza == nullptr) return nullptr;
+        NodoCircular* n = cabeza;
+        do {
+            if (n->actividad.hora == hora) return n;
+            n = n->siguiente;
+        } while (n != cabeza);
+        return nullptr;
+    }
+
+public:
+    RelojActividades() : cabeza(nullptr), actual(nullptr), horaActual(0), cantidad(0) {}
+
+    ~RelojActividades() {
+        if (cabeza == nullptr) return;
+        cabeza->anterior->siguiente = nullptr; 
+        NodoCircular* n = cabeza;
+        while (n != nullptr) {
+            NodoCircular* sig = n->siguiente;
+            delete n;
+            n = sig;
+        }
+    }
+
+    bool estaVacio() const { return cabeza == nullptr; }
+
+   
+    bool agregarActividad(const Actividad& a) {
+        if (a.hora < 0 || a.hora > 23) return false;
+        if (encontrarPorHora(a.hora) != nullptr) return false;
+
+        NodoCircular* nuevo = new NodoCircular(a);
+
+        if (cabeza == nullptr) {
+            nuevo->siguiente = nuevo;
+            nuevo->anterior = nuevo;
+            cabeza = nuevo;
+        }
+        else if (a.hora < cabeza->actividad.hora) {
+            NodoCircular* ultimo = cabeza->anterior;
+            nuevo->siguiente = cabeza;
+            nuevo->anterior = ultimo;
+            ultimo->siguiente = nuevo;
+            cabeza->anterior = nuevo;
+            cabeza = nuevo;
+        }
+        else {
+            NodoCircular* n = cabeza;
+            while (n->siguiente != cabeza && n->siguiente->actividad.hora < a.hora) {
+                n = n->siguiente;
+            }
+            nuevo->siguiente = n->siguiente;
+            nuevo->anterior = n;
+            n->siguiente->anterior = nuevo;
+            n->siguiente = nuevo;
+        }
+
+        cantidad++;
+        actual = bloqueDeHora(horaActual); 
+        return true;
+    }
+
+    bool eliminarActividad(int hora) {
+        NodoCircular* nodo = encontrarPorHora(hora);
+        if (nodo == nullptr) return false;
+
+        if (cantidad == 1) {
+            cabeza = nullptr;
+            actual = nullptr;
+        }
+        else {
+            nodo->anterior->siguiente = nodo->siguiente;
+            nodo->siguiente->anterior = nodo->anterior;
+            if (nodo == cabeza) cabeza = nodo->siguiente;
+        }
+        delete nodo;
+        cantidad--;
+        actual = bloqueDeHora(horaActual);
+        return true;
+    }
+
+    bool asignarHoraActual(int hora) {
+        if (hora < 0 || hora > 23) return false;
+        horaActual = hora;
+        actual = bloqueDeHora(horaActual);
+        return true;
+    }
+
+    int getHoraActual() const { return horaActual; }
+
+    void mostrarActividadActual() const {
+        cout << "Hora simulada: " << formatoHora(horaActual) << "\n";
+        if (actual == nullptr) {
+            cout << "No hay actividades registradas.\n";
+            return;
+        }
+        cout << "Actividad actual: " << actual->actividad.nombre
+            << " (" << formatoHora(actual->actividad.hora) << ")\n"
+            << "Descripcion: " << actual->actividad.descripcion << "\n";
+    }
+
+    void avanzar() {
+        if (actual == nullptr) { cout << "No hay actividades.\n"; return; }
+        actual = actual->siguiente;
+        horaActual = actual->actividad.hora;
+        cout << "Avanzo a: ";
+        cout << formatoHora(actual->actividad.hora) << " - " << actual->actividad.nombre << "\n";
+    }
+
+    void retroceder() {
+        if (actual == nullptr) { cout << "No hay actividades.\n"; return; }
+        actual = actual->anterior;
+        horaActual = actual->actividad.hora;
+        cout << "Retrocedio a: ";
+        cout << formatoHora(actual->actividad.hora) << " - " << actual->actividad.nombre << "\n";
+    }
+
+
+    void recorrerEnBucle(int vueltas = 2) const {
+        if (cabeza == nullptr) { cout << "No hay actividades.\n"; return; }
+        for (int v = 1; v <= vueltas; v++) {
+            cout << "--- Vuelta " << v << " ---\n";
+            NodoCircular* n = cabeza;
+            do {
+                cout << formatoHora(n->actividad.hora) << "  " << n->actividad.nombre
+                    << "  ->  siguiente: " << n->siguiente->actividad.nombre
+                    << "  | anterior: " << n->anterior->actividad.nombre << "\n";
+                n = n->siguiente;
+            } while (n != cabeza);
+            cout << "(el ultimo nodo apunta de nuevo a \""
+                << cabeza->actividad.nombre << "\")\n";
+        }
+    }
+
+    void visualizarCiclo() const {
+        if (cabeza == nullptr) { cout << "No hay actividades.\n"; return; }
+        cout << "\n   RELOJ DE ACTIVIDADES DIARIAS (lista circular)\n\n";
+        NodoCircular* n = cabeza;
+        do {
+            cout << "   [" << formatoHora(n->actividad.hora) << " " << n->actividad.nombre << "]";
+            if (n == actual) cout << "  <== AHORA";
+            cout << "\n      |  ^\n      v  |\n";
+            n = n->siguiente;
+        } while (n != cabeza);
+        cout << "   [vuelve a " << formatoHora(cabeza->actividad.hora) << " "
+            << cabeza->actividad.nombre << "]\n";
+    }
+};
+
+
+// Utilidades de entrada
+int leerEntero(const string& mensaje, int minimo, int maximo) {
+    int valor;
+    while (true) {
+        cout << mensaje;
+        if (cin >> valor && valor >= minimo && valor <= maximo) {
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            return valor;
+        }
+        cout << "Entrada invalida. Ingrese un numero entre " << minimo
+            << " y " << maximo << ".\n";
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+}
+
+string leerLinea(const string& mensaje) {
+    string texto;
+    cout << mensaje;
+    getline(cin, texto);
+    return texto;
+}
+
+void cargarEjemplo(RelojActividades& reloj) {
+    reloj.agregarActividad(Actividad("Despertar", "Levantarse y alistarse", 6));
+    reloj.agregarActividad(Actividad("Ejercicio", "Rutina matutina", 7));
+    reloj.agregarActividad(Actividad("Desayuno", "Desayunar en casa", 8));
+    reloj.agregarActividad(Actividad("Estudiar", "Clases y estudio", 9));
+    reloj.agregarActividad(Actividad("Almuerzo", "Almorzar", 13));
+    reloj.agregarActividad(Actividad("Proyecto", "Trabajar en proyectos", 15));
+    reloj.agregarActividad(Actividad("Cena", "Cenar con la familia", 18));
+    reloj.agregarActividad(Actividad("Lectura", "Leer un rato", 20));
+    reloj.agregarActividad(Actividad("Dormir", "Descansar", 22));
+    cout << "Se cargaron 9 actividades de ejemplo.\n";
+}
+
+// Programa principal
+
+int main() {
+    RelojActividades reloj;
+    int opcion;
+
+    do {
+        cout << "\n===== RELOJ DE ACTIVIDADES DIARIAS =====\n"
+            << "Hora simulada actual: " << formatoHora(reloj.getHoraActual()) << "\n"
+            << "1. Agregar actividad\n"
+            << "2. Eliminar actividad (por hora)\n"
+            << "3. Asignar hora actual (simulacion)\n"
+            << "4. Mostrar actividad actual\n"
+            << "5. Avanzar al siguiente bloque horario\n"
+            << "6. Retroceder al bloque anterior\n"
+            << "7. Recorrer actividades en bucle\n"
+            << "8. Visualizar ciclo\n"
+            << "9. Cargar datos de ejemplo\n"
+            << "0. Salir\n";
+        opcion = leerEntero("Opcion: ", 0, 9);
+        cout << "\n";
+
+        switch (opcion) {
+        case 1: {
+            string nombre = leerLinea("Nombre: ");
+            string desc = leerLinea("Descripcion: ");
+            int hora = leerEntero("Hora (0-23): ", 0, 23);
+            if (reloj.agregarActividad(Actividad(nombre, desc, hora)))
+                cout << "Actividad agregada.\n";
+            else
+                cout << "Ya existe una actividad a esa hora.\n";
+            break;
+        }
+        case 2: {
+            int hora = leerEntero("Hora de la actividad a eliminar (0-23): ", 0, 23);
+            if (reloj.eliminarActividad(hora)) cout << "Actividad eliminada.\n";
+            else cout << "No hay ninguna actividad a esa hora.\n";
+            break;
+        }
+        case 3: {
+            int hora = leerEntero("Nueva hora actual (0-23): ", 0, 23);
+            reloj.asignarHoraActual(hora);
+            cout << "Hora actual asignada a " << formatoHora(hora) << ".\n";
+            break;
+        }
+        case 4:
+            reloj.mostrarActividadActual();
+            break;
+        case 5:
+            reloj.avanzar();
+            break;
+        case 6:
+            reloj.retroceder();
+            break;
+        case 7:
+            reloj.recorrerEnBucle(2);
+            break;
+        case 8:
+            reloj.visualizarCiclo();
+            break;
+        case 9:
+            cargarEjemplo(reloj);
+            break;
+        case 0:
+            cout << "Saliendo...\n";
+            break;
+        }
+    } while (opcion != 0);
+
+    return 0;
+}
