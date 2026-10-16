@@ -1,0 +1,294 @@
+// Laboratorio 12 - Ejercicio 2
+// Simulacion de una cola de impresion (Cola)
+
+#include <iostream>
+#include <string>
+#include <stdexcept>
+
+using namespace std;
+
+
+// Excepcion personalizada
+
+class ExcepcionColaVacia : public runtime_error
+{
+public:
+    ExcepcionColaVacia()
+        : runtime_error("La cola esta vacia")
+    {
+    }
+};
+
+
+// Trabajo de impresion
+
+struct TrabajoImpresion
+{
+    int idTrabajo;
+    string documento;
+    int numeroPaginas;
+
+    TrabajoImpresion()
+    {
+        this->idTrabajo = 0;
+        this->documento = "";
+        this->numeroPaginas = 0;
+    }
+
+    TrabajoImpresion(int idTrabajo, const string& documento,
+        int numeroPaginas)
+    {
+        this->idTrabajo = idTrabajo;
+        this->documento = documento;
+        this->numeroPaginas = numeroPaginas;
+    }
+};
+
+
+// Nodo de la lista enlazada
+
+class Nodo
+{
+private:
+    TrabajoImpresion dato;
+    Nodo* siguiente;
+
+public:
+    Nodo(const TrabajoImpresion& dato)
+    {
+        this->dato = dato;
+        this->siguiente = nullptr;
+    }
+
+    TrabajoImpresion getDato() const
+    {
+        return this->dato;
+    }
+
+    Nodo* getSiguiente() const
+    {
+        return this->siguiente;
+    }
+
+    void setSiguiente(Nodo* siguiente)
+    {
+        this->siguiente = siguiente;
+    }
+};
+
+// Cola FIFO implementada con lista enlazada (punteros frente/final)
+
+class ColaTrabajos
+{
+private:
+    Nodo* frente;
+    Nodo* final;
+
+public:
+    ColaTrabajos()
+    {
+        this->frente = nullptr;
+        this->final = nullptr;
+    }
+
+    // Libera todos los nodos pendientes
+    ~ColaTrabajos()
+    {
+        while (!this->isEmpty())
+        {
+            this->dequeue();
+        }
+    }
+
+    ColaTrabajos(const ColaTrabajos&) = delete;
+    ColaTrabajos& operator=(const ColaTrabajos&) = delete;
+
+    bool isEmpty() const
+    {
+        return this->frente == nullptr;
+    }
+
+    // Inserta al final de la cola
+    void enqueue(const TrabajoImpresion& trabajo)
+    {
+        Nodo* nuevo = new Nodo(trabajo);
+
+        if (this->isEmpty())
+        {
+            this->frente = nuevo;
+        }
+        else
+        {
+            this->final->setSiguiente(nuevo);
+        }
+        this->final = nuevo;
+    }
+
+    // Extrae del frente (FIFO); lanza excepcion si esta vacia
+    TrabajoImpresion dequeue()
+    {
+        if (this->isEmpty())
+        {
+            throw ExcepcionColaVacia();
+        }
+
+        Nodo* nodoEliminar = this->frente;
+        TrabajoImpresion trabajo = nodoEliminar->getDato();
+        this->frente = nodoEliminar->getSiguiente();
+
+        // Si la cola quedo vacia, final tambien debe anularse
+        if (this->frente == nullptr)
+        {
+            this->final = nullptr;
+        }
+
+        delete nodoEliminar;
+        return trabajo;
+    }
+
+    // Devuelve el frente sin eliminarlo; con cola vacia devuelve
+   
+    TrabajoImpresion front() const
+    {
+        if (this->isEmpty())
+        {
+            return TrabajoImpresion();
+        }
+        return this->frente->getDato();
+    }
+};
+
+
+// Funciones de entrada
+
+int leerEnteroPositivo(const string& mensaje)
+{
+    int valor = 0;
+    bool valido = false;
+
+    do
+    {
+        cout << mensaje;
+        string linea;
+        getline(cin, linea);
+        try
+        {
+            valor = stoi(linea);
+            valido = valor > 0;
+        }
+        catch (const exception&)
+        {
+            valido = false;
+        }
+        if (!valido)
+        {
+            cout << "Ingrese un numero entero mayor que 0" << endl;
+        }
+    } while (!valido);
+
+    return valor;
+}
+
+double leerVelocidad()
+{
+    double valor = 0;
+    bool valido = false;
+
+    do
+    {
+        cout << "Velocidad de la impresora (segundos por pagina): ";
+        string linea;
+        getline(cin, linea);
+        try
+        {
+            valor = stod(linea);
+            valido = valor > 0;
+        }
+        catch (const exception&)
+        {
+            valido = false;
+        }
+        if (!valido)
+        {
+            cout << "Ingrese un numero mayor que 0" << endl;
+        }
+    } while (!valido);
+
+    return valor;
+}
+
+string leerDocumento(int numero)
+{
+    string nombre;
+    do
+    {
+        cout << "Documento #" << numero << " (nombre del archivo): ";
+        getline(cin, nombre);
+        if (nombre.empty())
+        {
+            cout << "El nombre no puede estar vacio" << endl;
+        }
+    } while (nombre.empty());
+    return nombre;
+}
+
+// Pide los datos de cada trabajo y los encola con id consecutivo
+void encolarTrabajos(ColaTrabajos& cola, int cantidad)
+{
+    for (int i = 1; i <= cantidad; i++)
+    {
+        string documento = leerDocumento(i);
+        int paginas = leerEnteroPositivo("Numero de paginas: ");
+        cola.enqueue(TrabajoImpresion(i, documento, paginas));
+    }
+}
+
+
+// Simulacion de impresion
+
+void simularImpresion(ColaTrabajos& cola, double velocidad)
+{
+    double tiempoTotal = 0;
+    int paginasTotales = 0;
+
+    cout << endl << "===== SIMULACION DE IMPRESION =====" << endl;
+
+    while (!cola.isEmpty())
+    {
+        TrabajoImpresion trabajo = cola.dequeue();
+        double tiempoImpresion = trabajo.numeroPaginas * velocidad;
+
+        cout << "Imprimiendo trabajo #" << trabajo.idTrabajo
+            << " \"" << trabajo.documento << "\" ("
+            << trabajo.numeroPaginas << " paginas, "
+            << tiempoImpresion << " seg)" << endl;
+
+        // (Opcional) el trabajo espero todo el tiempo acumulado
+        cout << "   Tiempo de espera: " << tiempoTotal << " seg"
+            << endl;
+
+        tiempoTotal += tiempoImpresion;
+        paginasTotales += trabajo.numeroPaginas;
+    }
+
+    cout << endl << "===== RESUMEN =====" << endl;
+    cout << "Tiempo total de impresion: " << tiempoTotal << " seg"
+        << endl;
+    cout << "Total de paginas impresas: " << paginasTotales << endl;
+}
+
+int main()
+{
+    ColaTrabajos cola;
+
+    int cantidad = leerEnteroPositivo(
+        "Cuantos trabajos se enviaran a la impresora: ");
+    double velocidad = leerVelocidad();
+
+    encolarTrabajos(cola, cantidad);
+    simularImpresion(cola, velocidad);
+
+    return 0;
+}
+
+
