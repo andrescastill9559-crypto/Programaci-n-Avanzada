@@ -1,0 +1,296 @@
+// Laboratorio 12.cpp Ejercicio 1
+
+#include <iostream>
+#include <string>
+#include <stdexcept>
+
+using namespace std;
+
+
+// Excepcion personalizada
+
+class ExcepcionPilaVacia : public runtime_error
+{
+public:
+    ExcepcionPilaVacia()
+        : runtime_error("La pila esta vacia")
+    {
+    }
+};
+
+
+// Nodo de la lista enlazada
+
+class Nodo
+{
+private:
+    string dato;
+    Nodo* siguiente;
+
+public:
+    Nodo(const string& dato, Nodo* siguiente)
+    {
+        this->dato = dato;
+        this->siguiente = siguiente;
+    }
+
+    string getDato() const
+    {
+        return this->dato;
+    }
+
+    Nodo* getSiguiente() const
+    {
+        return this->siguiente;
+    }
+
+    void setSiguiente(Nodo* siguiente)
+    {
+        this->siguiente = siguiente;
+    }
+};
+
+// Pila de cadenas implementada con lista enlazada
+
+class PilaCadenas
+{
+private:
+    Nodo* cima;
+
+public:
+    PilaCadenas()
+    {
+        this->cima = nullptr;
+    }
+
+    // Libera todos los nodos para evitar fugas de memoria
+    ~PilaCadenas()
+    {
+        this->vaciar();
+    }
+
+    // Evita copias superficiales que duplicarian la liberacion de nodos
+    PilaCadenas(const PilaCadenas&) = delete;
+    PilaCadenas& operator=(const PilaCadenas&) = delete;
+
+    bool isEmpty() const
+    {
+        return this->cima == nullptr;
+    }
+
+    // Inserta en la cima: el nuevo nodo apunta a la cima anterior
+    void push(const string& valor)
+    {
+        this->cima = new Nodo(valor, this->cima);
+    }
+
+    // Elimina y devuelve la cima; lanza excepcion si esta vacia
+    string pop()
+    {
+        if (this->isEmpty())
+        {
+            throw ExcepcionPilaVacia();
+        }
+
+        Nodo* nodoEliminar = this->cima;
+        string valor = nodoEliminar->getDato();
+        this->cima = nodoEliminar->getSiguiente();
+        delete nodoEliminar;
+        return valor;
+    }
+
+    // Devuelve la cima sin eliminarla; con pila vacia devuelve ""
+    string top() const
+    {
+        if (this->isEmpty())
+        {
+            return "";
+        }
+        return this->cima->getDato();
+    }
+
+    void vaciar()
+    {
+        while (!this->isEmpty())
+        {
+            this->pop();
+        }
+    }
+
+    // Muestra el contenido de la cima hacia la base
+    void mostrar() const
+    {
+        if (this->isEmpty())
+        {
+            cout << "  (vacia)" << endl;
+            return;
+        }
+
+        Nodo* actual = this->cima;
+        while (actual != nullptr)
+        {
+            cout << "  " << actual->getDato() << endl;
+            actual = actual->getSiguiente();
+        }
+    }
+};
+
+
+// Navegador: dos pilas independientes + pagina actual
+
+class Navegador
+{
+private:
+    PilaCadenas pilaAtras;
+    PilaCadenas pilaAdelante;
+    string paginaActual;
+
+public:
+    Navegador()
+    {
+        this->paginaActual = "";
+    }
+
+    void visitarPagina(const string& direccion)
+    {
+        // La primera visita no tiene pagina previa que guardar
+        if (!this->paginaActual.empty())
+        {
+            this->pilaAtras.push(this->paginaActual);
+        }
+        // Una nueva visita invalida el historial "adelante"
+        this->pilaAdelante.vaciar();
+        this->paginaActual = direccion;
+        this->mostrarPaginaActual();
+    }
+
+    void retroceder()
+    {
+        if (this->pilaAtras.isEmpty())
+        {
+            cout << "No hay paginas anteriores" << endl;
+            return;
+        }
+        this->pilaAdelante.push(this->paginaActual);
+        this->paginaActual = this->pilaAtras.pop();
+        this->mostrarPaginaActual();
+    }
+
+    void avanzar()
+    {
+        if (this->pilaAdelante.isEmpty())
+        {
+            cout << "No hay paginas siguientes" << endl;
+            return;
+        }
+        this->pilaAtras.push(this->paginaActual);
+        this->paginaActual = this->pilaAdelante.pop();
+        this->mostrarPaginaActual();
+    }
+
+    void mostrarPaginaActual() const
+    {
+        cout << "Pagina actual: " << this->paginaActual << endl;
+    }
+
+    void mostrarEstado() const
+    {
+        cout << "--- Estado del navegador ---" << endl;
+        if (this->paginaActual.empty())
+        {
+            cout << "Pagina actual: (ninguna)" << endl;
+        }
+        else
+        {
+            this->mostrarPaginaActual();
+        }
+        cout << "Pila atras (cima -> base):" << endl;
+        this->pilaAtras.mostrar();
+        cout << "Pila adelante (cima -> base):" << endl;
+        this->pilaAdelante.mostrar();
+    }
+};
+
+
+// Funciones de interfaz
+
+void mostrarMenu()
+{
+    cout << endl;
+    cout << "===== NAVEGADOR =====" << endl;
+    cout << "1. Visitar una pagina nueva" << endl;
+    cout << "2. Retroceder (Atras)" << endl;
+    cout << "3. Avanzar (Adelante)" << endl;
+    cout << "4. Mostrar el estado actual" << endl;
+    cout << "5. Salir" << endl;
+    cout << "Opcion: ";
+}
+
+// Lee una linea completa y la convierte a entero (-1 si es invalida)
+int leerOpcion()
+{
+    string linea;
+    getline(cin, linea);
+    try
+    {
+        return stoi(linea);
+    }
+    catch (const exception&)
+    {
+        return -1;
+    }
+}
+
+string leerDireccion()
+{
+    string direccion;
+    do
+    {
+        cout << "Direccion (ej. www.umg.edu.gt): ";
+        getline(cin, direccion);
+        if (direccion.empty())
+        {
+            cout << "La direccion no puede estar vacia" << endl;
+        }
+    } while (direccion.empty());
+    return direccion;
+}
+
+int main()
+{
+    Navegador navegador;
+    int opcion = 0;
+
+    do
+    {
+        mostrarMenu();
+        opcion = leerOpcion();
+
+        switch (opcion)
+        {
+        case 1:
+            navegador.visitarPagina(leerDireccion());
+            break;
+        case 2:
+            navegador.retroceder();
+            break;
+        case 3:
+            navegador.avanzar();
+            break;
+        case 4:
+            navegador.mostrarEstado();
+            break;
+        case 5:
+            cout << "Hasta luego" << endl;
+            break;
+        default:
+            cout << "Opcion invalida" << endl;
+            break;
+        }
+    } while (opcion != 5);
+
+    return 0;
+}
+
+
+
