@@ -1,0 +1,1100 @@
+// Laboratorio 13 AC1195025.cpp
+
+
+#include <iostream>
+#include <iomanip>
+#include <string>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <stdexcept>
+#include <cctype>
+
+using namespace std;
+
+
+// EXCEPCIONES PERSONALIZADAS
+
+class ExcepcionTienda : public runtime_error
+{
+public:
+    explicit ExcepcionTienda(const string& mensaje) : runtime_error(mensaje)
+    {
+    }
+};
+
+class ElementoNoEncontradoExcepcion : public ExcepcionTienda
+{
+public:
+    explicit ElementoNoEncontradoExcepcion(const string& mensaje) : ExcepcionTienda(mensaje)
+    {
+    }
+};
+
+class EstructuraVaciaExcepcion : public ExcepcionTienda
+{
+public:
+    explicit EstructuraVaciaExcepcion(const string& mensaje) : ExcepcionTienda(mensaje)
+    {
+    }
+};
+
+class OperacionInvalidaExcepcion : public ExcepcionTienda
+{
+public:
+    explicit OperacionInvalidaExcepcion(const string& mensaje) : ExcepcionTienda(mensaje)
+    {
+    }
+};
+
+
+// FUNCIONES AUXILIARES
+
+string aMinusculas(const string& texto)
+{
+    string resultado = texto;
+    for (size_t i = 0; i < resultado.size(); i++)
+    {
+        resultado[i] = (char)tolower((unsigned char)resultado[i]);
+    }
+    return resultado;
+}
+
+
+// CLASE PELICULA
+
+class Pelicula
+{
+private:
+    string titulo;
+    string genero;
+    double precioAlquiler;
+    int anioEstreno;
+    int copiasDisponibles;
+
+public:
+    Pelicula()
+    {
+        this->titulo = "";
+        this->genero = "";
+        this->precioAlquiler = 0.0;
+        this->anioEstreno = 0;
+        this->copiasDisponibles = 0;
+    }
+
+    Pelicula(const string& titulo, const string& genero, double precioAlquiler, int anioEstreno, int copiasDisponibles)
+    {
+        this->titulo = titulo;
+        this->genero = genero;
+        this->precioAlquiler = precioAlquiler;
+        this->anioEstreno = anioEstreno;
+        this->copiasDisponibles = copiasDisponibles;
+    }
+
+    string getTitulo() const { return this->titulo; }
+    string getGenero() const { return this->genero; }
+    double getPrecioAlquiler() const { return this->precioAlquiler; }
+    int getAnioEstreno() const { return this->anioEstreno; }
+    int getCopiasDisponibles() const { return this->copiasDisponibles; }
+
+    void setTitulo(const string& titulo) { this->titulo = titulo; }
+    void setGenero(const string& genero) { this->genero = genero; }
+
+    void setPrecioAlquiler(double precioAlquiler)
+    {
+        if (precioAlquiler < 0)
+        {
+            throw OperacionInvalidaExcepcion("El precio de alquiler no puede ser negativo.");
+        }
+        this->precioAlquiler = precioAlquiler;
+    }
+
+    void setAnioEstreno(int anioEstreno) { this->anioEstreno = anioEstreno; }
+
+    void setCopiasDisponibles(int copiasDisponibles)
+    {
+        if (copiasDisponibles < 0)
+        {
+            throw OperacionInvalidaExcepcion("Las copias disponibles no pueden ser negativas.");
+        }
+        this->copiasDisponibles = copiasDisponibles;
+    }
+};
+
+
+// CLASE CLIENTE
+
+class Cliente
+{
+private:
+    string nombre;
+    int id;
+    string correo;
+    int totalAlquileres; // se usa en el Selection Sort (cliente con mas alquileres)
+
+public:
+    Cliente()
+    {
+        this->nombre = "";
+        this->id = 0;
+        this->correo = "";
+        this->totalAlquileres = 0;
+    }
+
+    Cliente(const string& nombre, int id, const string& correo)
+    {
+        this->nombre = nombre;
+        this->id = id;
+        this->correo = correo;
+        this->totalAlquileres = 0;
+    }
+
+    string getNombre() const { return this->nombre; }
+    int getId() const { return this->id; }
+    string getCorreo() const { return this->correo; }
+    int getTotalAlquileres() const { return this->totalAlquileres; }
+
+    void setNombre(const string& nombre) { this->nombre = nombre; }
+    void setId(int id) { this->id = id; }
+    void setCorreo(const string& correo) { this->correo = correo; }
+    void setTotalAlquileres(int totalAlquileres) { this->totalAlquileres = totalAlquileres; }
+};
+
+
+// CLASE ALQUILER
+
+class Alquiler
+{
+private:
+    int idAlquiler;
+    string tituloPelicula;
+    int idCliente;
+    string nombreCliente;
+    string fechaAlquiler;
+    string fechaDevolucion;
+    int dias;
+    double montoTotal;
+    bool devuelto;
+
+public:
+    Alquiler()
+    {
+        this->idAlquiler = 0;
+        this->tituloPelicula = "";
+        this->idCliente = 0;
+        this->nombreCliente = "";
+        this->fechaAlquiler = "";
+        this->fechaDevolucion = "Pendiente";
+        this->dias = 0;
+        this->montoTotal = 0.0;
+        this->devuelto = false;
+    }
+
+    Alquiler(int idAlquiler, const string& tituloPelicula, int idCliente, const string& nombreCliente,
+        const string& fechaAlquiler, int dias, double montoTotal)
+    {
+        this->idAlquiler = idAlquiler;
+        this->tituloPelicula = tituloPelicula;
+        this->idCliente = idCliente;
+        this->nombreCliente = nombreCliente;
+        this->fechaAlquiler = fechaAlquiler;
+        this->fechaDevolucion = "Pendiente";
+        this->dias = dias;
+        this->montoTotal = montoTotal;
+        this->devuelto = false;
+    }
+
+    int getIdAlquiler() const { return this->idAlquiler; }
+    string getTituloPelicula() const { return this->tituloPelicula; }
+    int getIdCliente() const { return this->idCliente; }
+    string getNombreCliente() const { return this->nombreCliente; }
+    string getFechaAlquiler() const { return this->fechaAlquiler; }
+    string getFechaDevolucion() const { return this->fechaDevolucion; }
+    int getDias() const { return this->dias; }
+    double getMontoTotal() const { return this->montoTotal; }
+    bool getDevuelto() const { return this->devuelto; }
+
+    void setFechaDevolucion(const string& fechaDevolucion) { this->fechaDevolucion = fechaDevolucion; }
+    void setDevuelto(bool devuelto) { this->devuelto = devuelto; }
+    void setMontoTotal(double montoTotal) { this->montoTotal = montoTotal; }
+};
+
+// CLASE RESERVA (elemento de la cola)
+
+class Reserva
+{
+private:
+    int idCliente;
+    string tituloPelicula;
+
+public:
+    Reserva(int idCliente, const string& tituloPelicula)
+    {
+        this->idCliente = idCliente;
+        this->tituloPelicula = tituloPelicula;
+    }
+
+    int getIdCliente() const { return this->idCliente; }
+    string getTituloPelicula() const { return this->tituloPelicula; }
+};
+
+
+// COMPARADORES (criterio de ordenamiento: true si "a" va antes que "b")
+
+typedef bool (*Comparador)(const Pelicula&, const Pelicula&);
+
+bool precedePorTitulo(const Pelicula& a, const Pelicula& b)
+{
+    return aMinusculas(a.getTitulo()) < aMinusculas(b.getTitulo());
+}
+
+bool precedePorGenero(const Pelicula& a, const Pelicula& b)
+{
+    string generoA = aMinusculas(a.getGenero());
+    string generoB = aMinusculas(b.getGenero());
+    if (generoA != generoB)
+    {
+        return generoA < generoB;
+    }
+    return aMinusculas(a.getTitulo()) < aMinusculas(b.getTitulo());
+}
+
+bool precedePorPrecio(const Pelicula& a, const Pelicula& b)
+{
+    return a.getPrecioAlquiler() < b.getPrecioAlquiler();
+}
+
+bool precedePorAnio(const Pelicula& a, const Pelicula& b)
+{
+    return a.getAnioEstreno() < b.getAnioEstreno();
+}
+
+bool precedePorPrecioDescendente(const Pelicula& a, const Pelicula& b)
+{
+    return a.getPrecioAlquiler() > b.getPrecioAlquiler();
+}
+
+
+// CLASE TIENDA (clase gestora)
+
+class Tienda
+{
+private:
+    vector<Pelicula> catalogo;     // Lista
+    vector<Cliente> clientes;      // Lista
+    vector<Alquiler> historial;    // Lista
+    stack<Alquiler> devoluciones;  // Pila (LIFO)
+    queue<Reserva> reservas;       // Cola (FIFO)
+    int siguienteIdAlquiler;
+
+    // Busquedas internas
+    int buscarIndicePelicula(const string& titulo) const
+    {
+        string buscado = aMinusculas(titulo);
+        for (size_t i = 0; i < this->catalogo.size(); i++)
+        {
+            if (aMinusculas(this->catalogo[i].getTitulo()) == buscado)
+            {
+                return (int)i;
+            }
+        }
+        return -1;
+    }
+
+    int buscarIndiceCliente(int id) const
+    {
+        for (size_t i = 0; i < this->clientes.size(); i++)
+        {
+            if (this->clientes[i].getId() == id)
+            {
+                return (int)i;
+            }
+        }
+        return -1;
+    }
+
+    // Algoritmos de ordenamiento
+
+    // Burbuja (Bubble Sort): compara pares adyacentes e intercambia
+    void burbuja(vector<Pelicula>& v, Comparador precede)
+    {
+        int n = (int)v.size();
+        for (int i = 0; i < n - 1; i++)
+        {
+            bool huboIntercambio = false;
+            for (int j = 0; j < n - i - 1; j++)
+            {
+                if (precede(v[j + 1], v[j]))
+                {
+                    swap(v[j], v[j + 1]);
+                    huboIntercambio = true;
+                }
+            }
+            if (!huboIntercambio)
+            {
+                break; // ya esta ordenado
+            }
+        }
+    }
+
+    // Seleccion (Selection Sort): busca el elemento que debe ir en la posicion i
+    void seleccion(vector<Pelicula>& v, Comparador precede)
+    {
+        int n = (int)v.size();
+        for (int i = 0; i < n - 1; i++)
+        {
+            int indiceElegido = i;
+            for (int j = i + 1; j < n; j++)
+            {
+                if (precede(v[j], v[indiceElegido]))
+                {
+                    indiceElegido = j;
+                }
+            }
+            if (indiceElegido != i)
+            {
+                swap(v[i], v[indiceElegido]);
+            }
+        }
+    }
+
+    // Shell Sort: insercion con saltos (brechas) decrecientes
+    void shell(vector<Pelicula>& v, Comparador precede)
+    {
+        int n = (int)v.size();
+        for (int brecha = n / 2; brecha > 0; brecha /= 2)
+        {
+            for (int i = brecha; i < n; i++)
+            {
+                Pelicula temporal = v[i];
+                int j = i;
+                while (j >= brecha && precede(temporal, v[j - brecha]))
+                {
+                    v[j] = v[j - brecha];
+                    j -= brecha;
+                }
+                v[j] = temporal;
+            }
+        }
+    }
+
+    // Quick Sort: particion con pivote al final (esquema de Lomuto)
+    int particionar(vector<Pelicula>& v, int bajo, int alto, Comparador precede)
+    {
+        Pelicula pivote = v[alto];
+        int i = bajo - 1;
+        for (int j = bajo; j < alto; j++)
+        {
+            if (precede(v[j], pivote))
+            {
+                i++;
+                swap(v[i], v[j]);
+            }
+        }
+        swap(v[i + 1], v[alto]);
+        return i + 1;
+    }
+
+    void quickSort(vector<Pelicula>& v, int bajo, int alto, Comparador precede)
+    {
+        if (bajo < alto)
+        {
+            int indicePivote = this->particionar(v, bajo, alto, precede);
+            this->quickSort(v, bajo, indicePivote - 1, precede);
+            this->quickSort(v, indicePivote + 1, alto, precede);
+        }
+    }
+
+    // Datos precargados
+    void cargarDatosIniciales()
+    {
+        // 5 clientes
+        this->clientes.push_back(Cliente("Ana Lopez", 1001, "ana.lopez@correo.com"));
+        this->clientes.push_back(Cliente("Carlos Perez", 1002, "carlos.perez@correo.com"));
+        this->clientes.push_back(Cliente("Maria Gomez", 1003, "maria.gomez@correo.com"));
+        this->clientes.push_back(Cliente("Luis Ramirez", 1004, "luis.ramirez@correo.com"));
+        this->clientes.push_back(Cliente("Sofia Morales", 1005, "sofia.morales@correo.com"));
+
+        // 10 peliculas (titulo, genero, precio, anio, copias). "Avatar" inicia sin copias para probar reservas.
+        this->catalogo.push_back(Pelicula("El Padrino", "Drama", 15.00, 1972, 3));
+        this->catalogo.push_back(Pelicula("Titanic", "Romance", 12.00, 1997, 2));
+        this->catalogo.push_back(Pelicula("Jurassic Park", "Aventura", 12.50, 1993, 4));
+        this->catalogo.push_back(Pelicula("Matrix", "Ciencia Ficcion", 14.00, 1999, 2));
+        this->catalogo.push_back(Pelicula("Toy Story", "Animacion", 10.00, 1995, 5));
+        this->catalogo.push_back(Pelicula("Avatar", "Ciencia Ficcion", 18.00, 2009, 0));
+        this->catalogo.push_back(Pelicula("Coco", "Animacion", 16.00, 2017, 3));
+        this->catalogo.push_back(Pelicula("Gladiador", "Accion", 13.00, 2000, 1));
+        this->catalogo.push_back(Pelicula("Scream", "Terror", 11.00, 1996, 1));
+        this->catalogo.push_back(Pelicula("Intensamente", "Animacion", 20.00, 2015, 2));
+    }
+
+public:
+    Tienda()
+    {
+        this->siguienteIdAlquiler = 1;
+        this->cargarDatosIniciales();
+    }
+
+    // Validaciones publicas 
+    void validarCatalogoNoVacio() const
+    {
+        if (this->catalogo.empty())
+        {
+            throw EstructuraVaciaExcepcion("El catalogo esta vacio.");
+        }
+    }
+
+    void validarClientesNoVacio() const
+    {
+        if (this->clientes.empty())
+        {
+            throw EstructuraVaciaExcepcion("No hay clientes registrados.");
+        }
+    }
+
+    int cantidadReservas() const { return (int)this->reservas.size(); }
+
+    // Gestion de peliculas y clientes
+    void agregarPelicula(const Pelicula& pelicula)
+    {
+        if (this->buscarIndicePelicula(pelicula.getTitulo()) != -1)
+        {
+            throw OperacionInvalidaExcepcion("Ya existe una pelicula con ese titulo.");
+        }
+        this->catalogo.push_back(pelicula);
+    }
+
+    void eliminarPelicula(const string& titulo)
+    {
+        this->validarCatalogoNoVacio();
+        int indice = this->buscarIndicePelicula(titulo);
+        if (indice == -1)
+        {
+            throw ElementoNoEncontradoExcepcion("La pelicula \"" + titulo + "\" no existe en el catalogo.");
+        }
+        this->catalogo.erase(this->catalogo.begin() + indice);
+    }
+
+    void registrarCliente(const Cliente& cliente)
+    {
+        if (this->buscarIndiceCliente(cliente.getId()) != -1)
+        {
+            throw OperacionInvalidaExcepcion("Ya existe un cliente con ese ID.");
+        }
+        this->clientes.push_back(cliente);
+    }
+
+    // Alquileres, devoluciones y reservas
+    void registrarAlquiler(int idCliente, const string& titulo, const string& fecha, int dias)
+    {
+        this->validarCatalogoNoVacio();
+        int indiceCliente = this->buscarIndiceCliente(idCliente);
+        if (indiceCliente == -1)
+        {
+            throw ElementoNoEncontradoExcepcion("No existe un cliente con ese ID.");
+        }
+        int indicePelicula = this->buscarIndicePelicula(titulo);
+        if (indicePelicula == -1)
+        {
+            throw ElementoNoEncontradoExcepcion("La pelicula \"" + titulo + "\" no existe en el catalogo.");
+        }
+        if (this->catalogo[indicePelicula].getCopiasDisponibles() <= 0)
+        {
+            throw OperacionInvalidaExcepcion("No hay copias disponibles. Puede registrar una solicitud de reserva.");
+        }
+
+        // a) asociar pelicula, cliente y fecha
+        double monto = this->catalogo[indicePelicula].getPrecioAlquiler() * dias;
+        Alquiler nuevo(this->siguienteIdAlquiler, this->catalogo[indicePelicula].getTitulo(),
+            this->clientes[indiceCliente].getId(), this->clientes[indiceCliente].getNombre(),
+            fecha, dias, monto);
+        this->siguienteIdAlquiler++;
+
+        // b) descontar una copia disponible
+        this->catalogo[indicePelicula].setCopiasDisponibles(this->catalogo[indicePelicula].getCopiasDisponibles() - 1);
+        this->clientes[indiceCliente].setTotalAlquileres(this->clientes[indiceCliente].getTotalAlquileres() + 1);
+
+        // c) agregar al historial (lista) y a la pila de devoluciones
+        this->historial.push_back(nuevo);
+        this->devoluciones.push(nuevo);
+
+        cout << "Alquiler #" << nuevo.getIdAlquiler() << " registrado. Monto total: Q"
+            << fixed << setprecision(2) << monto << endl;
+    }
+
+    void registrarDevolucion(const string& fechaDevolucion)
+    {
+        if (this->devoluciones.empty())
+        {
+            throw EstructuraVaciaExcepcion("La pila de devoluciones esta vacia: no hay alquileres pendientes.");
+        }
+
+        // a) extraer el ultimo elemento de la pila
+        Alquiler alquiler = this->devoluciones.top();
+        this->devoluciones.pop();
+
+        // actualizar el registro correspondiente en el historial
+        for (size_t i = 0; i < this->historial.size(); i++)
+        {
+            if (this->historial[i].getIdAlquiler() == alquiler.getIdAlquiler())
+            {
+                this->historial[i].setFechaDevolucion(fechaDevolucion);
+                this->historial[i].setDevuelto(true);
+            }
+        }
+
+        // b) incrementar las copias disponibles (si la pelicula sigue en el catalogo)
+        int indicePelicula = this->buscarIndicePelicula(alquiler.getTituloPelicula());
+        if (indicePelicula != -1)
+        {
+            this->catalogo[indicePelicula].setCopiasDisponibles(
+                this->catalogo[indicePelicula].getCopiasDisponibles() + 1);
+            cout << "Devolucion registrada: \"" << alquiler.getTituloPelicula() << "\" (alquiler #"
+                << alquiler.getIdAlquiler() << ", cliente " << alquiler.getNombreCliente() << ")." << endl;
+        }
+        else
+        {
+            cout << "Devolucion registrada, pero \"" << alquiler.getTituloPelicula()
+                << "\" ya no esta en el catalogo (no se incrementan copias)." << endl;
+        }
+    }
+
+    void registrarReserva(int idCliente, const string& titulo)
+    {
+        this->validarCatalogoNoVacio();
+        if (this->buscarIndiceCliente(idCliente) == -1)
+        {
+            throw ElementoNoEncontradoExcepcion("No existe un cliente con ese ID.");
+        }
+        int indicePelicula = this->buscarIndicePelicula(titulo);
+        if (indicePelicula == -1)
+        {
+            throw ElementoNoEncontradoExcepcion("La pelicula \"" + titulo + "\" no existe en el catalogo.");
+        }
+        if (this->catalogo[indicePelicula].getCopiasDisponibles() > 0)
+        {
+            throw OperacionInvalidaExcepcion("La pelicula tiene copias disponibles; no necesita reserva, alquilela directamente.");
+        }
+
+        // insertar al final de la cola
+        this->reservas.push(Reserva(idCliente, this->catalogo[indicePelicula].getTitulo()));
+        cout << "Reserva registrada. Posicion en la cola: " << this->reservas.size() << endl;
+    }
+
+    void procesarSolicitud(const string& fecha, int dias)
+    {
+        if (this->reservas.empty())
+        {
+            throw EstructuraVaciaExcepcion("La cola de reservas esta vacia.");
+        }
+
+        Reserva siguiente = this->reservas.front(); // primer cliente en la cola
+        int indicePelicula = this->buscarIndicePelicula(siguiente.getTituloPelicula());
+
+        if (indicePelicula == -1)
+        {
+            this->reservas.pop();
+            throw OperacionInvalidaExcepcion("La pelicula reservada ya no existe en el catalogo. Solicitud descartada.");
+        }
+        if (this->catalogo[indicePelicula].getCopiasDisponibles() <= 0)
+        {
+            throw OperacionInvalidaExcepcion("Aun no hay copias de \"" + siguiente.getTituloPelicula()
+                + "\". La solicitud permanece en la cola.");
+        }
+
+        this->reservas.pop();
+        cout << "Atendiendo reserva del cliente " << siguiente.getIdCliente() << "..." << endl;
+        this->registrarAlquiler(siguiente.getIdCliente(), siguiente.getTituloPelicula(), fecha, dias);
+    }
+
+    // Ordenamientos del catalogo
+    void ordenarPorTituloBurbuja()
+    {
+        this->validarCatalogoNoVacio();
+        this->burbuja(this->catalogo, precedePorTitulo);
+    }
+
+    void ordenarPorTituloQuick()
+    {
+        this->validarCatalogoNoVacio();
+        this->quickSort(this->catalogo, 0, (int)this->catalogo.size() - 1, precedePorTitulo);
+    }
+
+    void ordenarPorGeneroQuick()
+    {
+        this->validarCatalogoNoVacio();
+        this->quickSort(this->catalogo, 0, (int)this->catalogo.size() - 1, precedePorGenero);
+    }
+
+    void ordenarPorPrecioShell()
+    {
+        this->validarCatalogoNoVacio();
+        this->shell(this->catalogo, precedePorPrecio);
+    }
+
+    void ordenarPorAnioShell()
+    {
+        this->validarCatalogoNoVacio();
+        this->shell(this->catalogo, precedePorAnio);
+    }
+
+    // Seleccion: deja el catalogo de mayor a menor precio; la primera es la mas cara
+    void ordenarPorPrecioSeleccion()
+    {
+        this->validarCatalogoNoVacio();
+        this->seleccion(this->catalogo, precedePorPrecioDescendente);
+    }
+
+    // Seleccion: deja los clientes de mayor a menor numero de alquileres; el primero es el que mas alquila
+    void ordenarClientesPorAlquileresSeleccion()
+    {
+        this->validarClientesNoVacio();
+        int n = (int)this->clientes.size();
+        for (int i = 0; i < n - 1; i++)
+        {
+            int indiceMayor = i;
+            for (int j = i + 1; j < n; j++)
+            {
+                if (this->clientes[j].getTotalAlquileres() > this->clientes[indiceMayor].getTotalAlquileres())
+                {
+                    indiceMayor = j;
+                }
+            }
+            if (indiceMayor != i)
+            {
+                swap(this->clientes[i], this->clientes[indiceMayor]);
+            }
+        }
+    }
+
+    Pelicula getPrimeraPelicula() const { return this->catalogo[0]; }
+    Cliente getPrimerCliente() const { return this->clientes[0]; }
+
+    // Reportes
+    void mostrarCatalogo() const
+    {
+        this->validarCatalogoNoVacio();
+        cout << left << setw(4) << "#" << setw(22) << "Titulo" << setw(18) << "Genero"
+            << setw(10) << "Precio" << setw(8) << "Anio" << setw(8) << "Copias" << endl;
+        cout << string(70, '-') << endl;
+        for (size_t i = 0; i < this->catalogo.size(); i++)
+        {
+            const Pelicula& p = this->catalogo[i];
+            cout << left << setw(4) << (i + 1) << setw(22) << p.getTitulo() << setw(18) << p.getGenero()
+                << "Q" << setw(9) << fixed << setprecision(2) << p.getPrecioAlquiler()
+                << setw(8) << p.getAnioEstreno() << setw(8) << p.getCopiasDisponibles() << endl;
+        }
+    }
+
+    void mostrarClientes() const
+    {
+        this->validarClientesNoVacio();
+        cout << left << setw(8) << "ID" << setw(22) << "Nombre" << setw(30) << "Correo" << setw(10) << "Alquileres" << endl;
+        cout << string(70, '-') << endl;
+        for (size_t i = 0; i < this->clientes.size(); i++)
+        {
+            const Cliente& c = this->clientes[i];
+            cout << left << setw(8) << c.getId() << setw(22) << c.getNombre() << setw(30) << c.getCorreo()
+                << setw(10) << c.getTotalAlquileres() << endl;
+        }
+    }
+
+    void mostrarHistorial() const
+    {
+        if (this->historial.empty())
+        {
+            throw EstructuraVaciaExcepcion("El historial de alquileres esta vacio.");
+        }
+        cout << left << setw(5) << "ID" << setw(18) << "Pelicula" << setw(16) << "Cliente"
+            << setw(13) << "Alquiler" << setw(13) << "Devolucion" << setw(6) << "Dias" << setw(10) << "Monto" << endl;
+        cout << string(81, '-') << endl;
+        for (size_t i = 0; i < this->historial.size(); i++)
+        {
+            const Alquiler& a = this->historial[i];
+            cout << left << setw(5) << a.getIdAlquiler() << setw(18) << a.getTituloPelicula()
+                << setw(16) << a.getNombreCliente() << setw(13) << a.getFechaAlquiler()
+                << setw(13) << a.getFechaDevolucion() << setw(6) << a.getDias()
+                << "Q" << fixed << setprecision(2) << a.getMontoTotal() << endl;
+        }
+    }
+
+    // Se copia la pila para poder recorrerla sin alterar la original
+    void mostrarPilaDevoluciones() const
+    {
+        if (this->devoluciones.empty())
+        {
+            throw EstructuraVaciaExcepcion("La pila de devoluciones esta vacia.");
+        }
+        stack<Alquiler> copia = this->devoluciones;
+        cout << "(Tope de la pila = proximo en devolverse)" << endl;
+        while (!copia.empty())
+        {
+            Alquiler a = copia.top();
+            copia.pop();
+            cout << " - Alquiler #" << a.getIdAlquiler() << ": \"" << a.getTituloPelicula()
+                << "\" (" << a.getNombreCliente() << ")" << endl;
+        }
+    }
+
+    // Se copia la cola para poder recorrerla sin alterar la original
+    void mostrarColaReservas() const
+    {
+        if (this->reservas.empty())
+        {
+            throw EstructuraVaciaExcepcion("La cola de reservas esta vacia.");
+        }
+        queue<Reserva> copia = this->reservas;
+        cout << "(Frente de la cola = proximo en ser atendido)" << endl;
+        int posicion = 1;
+        while (!copia.empty())
+        {
+            Reserva r = copia.front();
+            copia.pop();
+            cout << " " << posicion << ". Cliente " << r.getIdCliente() << " espera \""
+                << r.getTituloPelicula() << "\"" << endl;
+            posicion++;
+        }
+    }
+};
+
+// LECTURA DE DATOS CON VALIDACION
+
+string leerTexto(const string& mensaje)
+{
+    string valor;
+    do
+    {
+        cout << mensaje;
+        getline(cin, valor);
+        if (valor.empty())
+        {
+            cout << "  El valor no puede estar vacio." << endl;
+        }
+    } while (valor.empty());
+    return valor;
+}
+
+int leerEntero(const string& mensaje, int minimo, int maximo)
+{
+    while (true)
+    {
+        cout << mensaje;
+        string linea;
+        getline(cin, linea);
+        try
+        {
+            size_t posicion = 0;
+            int valor = stoi(linea, &posicion);
+            if (posicion != linea.size())
+            {
+                throw invalid_argument("basura al final");
+            }
+            if (valor < minimo || valor > maximo)
+            {
+                cout << "  Ingrese un numero entre " << minimo << " y " << maximo << "." << endl;
+                continue;
+            }
+            return valor;
+        }
+        catch (const exception&)
+        {
+            cout << "  Entrada invalida. Ingrese un numero entero." << endl;
+        }
+    }
+}
+
+double leerDecimal(const string& mensaje, double minimo)
+{
+    while (true)
+    {
+        cout << mensaje;
+        string linea;
+        getline(cin, linea);
+        try
+        {
+            size_t posicion = 0;
+            double valor = stod(linea, &posicion);
+            if (posicion != linea.size())
+            {
+                throw invalid_argument("basura al final");
+            }
+            if (valor < minimo)
+            {
+                cout << "  El valor debe ser mayor o igual a " << minimo << "." << endl;
+                continue;
+            }
+            return valor;
+        }
+        catch (const exception&)
+        {
+            cout << "  Entrada invalida. Ingrese un numero (ej. 12.50)." << endl;
+        }
+    }
+}
+
+// Valida el formato dd/mm/aaaa de forma sencilla
+string leerFecha(const string& mensaje)
+{
+    while (true)
+    {
+        string fecha = leerTexto(mensaje + " (dd/mm/aaaa): ");
+        bool valida = (fecha.size() == 10 && fecha[2] == '/' && fecha[5] == '/');
+        for (size_t i = 0; valida && i < fecha.size(); i++)
+        {
+            if (i != 2 && i != 5 && !isdigit((unsigned char)fecha[i]))
+            {
+                valida = false;
+            }
+        }
+        if (valida)
+        {
+            return fecha;
+        }
+        cout << "  Formato de fecha invalido." << endl;
+    }
+}
+
+string leerCorreo(const string& mensaje)
+{
+    while (true)
+    {
+        string correo = leerTexto(mensaje);
+        size_t arroba = correo.find('@');
+        if (arroba != string::npos && arroba > 0 && correo.find('.', arroba) != string::npos)
+        {
+            return correo;
+        }
+        cout << "  Correo invalido (ej. usuario@correo.com)." << endl;
+    }
+}
+
+
+// MENUS
+
+void menuGestion(Tienda& tienda)
+{
+    int opcion;
+    do
+    {
+        cout << "\n--- GESTION ---" << endl;
+        cout << "1. Agregar pelicula" << endl;
+        cout << "2. Eliminar pelicula" << endl;
+        cout << "3. Registrar cliente" << endl;
+        cout << "4. Mostrar catalogo" << endl;
+        cout << "5. Mostrar clientes" << endl;
+        cout << "0. Volver" << endl;
+        opcion = leerEntero("Opcion: ", 0, 5);
+
+        try
+        {
+            switch (opcion)
+            {
+            case 1:
+            {
+                string titulo = leerTexto("Titulo: ");
+                string genero = leerTexto("Genero: ");
+                double precio = leerDecimal("Precio de alquiler (Q): ", 0.0);
+                int anio = leerEntero("Anio de estreno: ", 1888, 2100);
+                int copias = leerEntero("Copias disponibles: ", 0, 1000);
+                tienda.agregarPelicula(Pelicula(titulo, genero, precio, anio, copias));
+                cout << "Pelicula agregada." << endl;
+                break;
+            }
+            case 2:
+            {
+                tienda.validarCatalogoNoVacio();
+                string titulo = leerTexto("Titulo de la pelicula a eliminar: ");
+                tienda.eliminarPelicula(titulo);
+                cout << "Pelicula eliminada." << endl;
+                break;
+            }
+            case 3:
+            {
+                string nombre = leerTexto("Nombre: ");
+                int id = leerEntero("ID: ", 1, 999999999);
+                string correo = leerCorreo("Correo electronico: ");
+                tienda.registrarCliente(Cliente(nombre, id, correo));
+                cout << "Cliente registrado." << endl;
+                break;
+            }
+            case 4:
+                tienda.mostrarCatalogo();
+                break;
+            case 5:
+                tienda.mostrarClientes();
+                break;
+            }
+        }
+        catch (const ExcepcionTienda& e)
+        {
+            cout << "Error: " << e.what() << endl;
+        }
+    } while (opcion != 0);
+}
+
+void menuAlquileres(Tienda& tienda)
+{
+    int opcion;
+    do
+    {
+        cout << "\n--- ALQUILERES ---" << endl;
+        cout << "1. Registrar alquiler" << endl;
+        cout << "2. Registrar devolucion (ultimo alquiler)" << endl;
+        cout << "3. Registrar solicitud de reserva" << endl;
+        cout << "4. Procesar solicitud (primero en la cola)" << endl;
+        cout << "5. Ver historial de alquileres" << endl;
+        cout << "6. Ver pila de devoluciones" << endl;
+        cout << "7. Ver cola de reservas" << endl;
+        cout << "0. Volver" << endl;
+        opcion = leerEntero("Opcion: ", 0, 7);
+
+        try
+        {
+            switch (opcion)
+            {
+            case 1:
+            {
+                tienda.validarCatalogoNoVacio();
+                tienda.mostrarCatalogo();
+                int idCliente = leerEntero("ID del cliente: ", 1, 999999999);
+                string titulo = leerTexto("Titulo de la pelicula: ");
+                string fecha = leerFecha("Fecha de alquiler");
+                int dias = leerEntero("Dias de alquiler: ", 1, 60);
+                tienda.registrarAlquiler(idCliente, titulo, fecha, dias);
+                break;
+            }
+            case 2:
+            {
+                string fecha = leerFecha("Fecha de devolucion");
+                tienda.registrarDevolucion(fecha);
+                break;
+            }
+            case 3:
+            {
+                int idCliente = leerEntero("ID del cliente: ", 1, 999999999);
+                string titulo = leerTexto("Titulo de la pelicula agotada: ");
+                tienda.registrarReserva(idCliente, titulo);
+                break;
+            }
+            case 4:
+            {
+                if (tienda.cantidadReservas() == 0)
+                {
+                    throw EstructuraVaciaExcepcion("La cola de reservas esta vacia.");
+                }
+                string fecha = leerFecha("Fecha de alquiler");
+                int dias = leerEntero("Dias de alquiler: ", 1, 60);
+                tienda.procesarSolicitud(fecha, dias);
+                break;
+            }
+            case 5:
+                tienda.mostrarHistorial();
+                break;
+            case 6:
+                tienda.mostrarPilaDevoluciones();
+                break;
+            case 7:
+                tienda.mostrarColaReservas();
+                break;
+            }
+        }
+        catch (const ExcepcionTienda& e)
+        {
+            cout << "Error: " << e.what() << endl;
+        }
+    } while (opcion != 0);
+}
+
+void menuOrdenamientos(Tienda& tienda)
+{
+    int opcion;
+    do
+    {
+        cout << "\n--- ORDENAMIENTOS ---" << endl;
+        cout << "1. Por titulo (Burbuja)" << endl;
+        cout << "2. Por titulo (Quick Sort)" << endl;
+        cout << "3. Por genero (Quick Sort)" << endl;
+        cout << "4. Por precio de alquiler (Shell Sort)" << endl;
+        cout << "5. Por anio de estreno (Shell Sort)" << endl;
+        cout << "6. Pelicula mas cara (Seleccion)" << endl;
+        cout << "7. Cliente con mas alquileres (Seleccion)" << endl;
+        cout << "0. Volver" << endl;
+        opcion = leerEntero("Opcion: ", 0, 7);
+
+        try
+        {
+            if (opcion >= 1 && opcion <= 6)
+            {
+                tienda.validarCatalogoNoVacio();
+                cout << "\n>>> CATALOGO ANTES DEL ORDENAMIENTO" << endl;
+                tienda.mostrarCatalogo();
+
+                switch (opcion)
+                {
+                case 1: tienda.ordenarPorTituloBurbuja(); break;
+                case 2: tienda.ordenarPorTituloQuick(); break;
+                case 3: tienda.ordenarPorGeneroQuick(); break;
+                case 4: tienda.ordenarPorPrecioShell(); break;
+                case 5: tienda.ordenarPorAnioShell(); break;
+                case 6: tienda.ordenarPorPrecioSeleccion(); break;
+                }
+
+                cout << "\n>>> CATALOGO DESPUES DEL ORDENAMIENTO" << endl;
+                tienda.mostrarCatalogo();
+
+                if (opcion == 6)
+                {
+                    Pelicula masCara = tienda.getPrimeraPelicula();
+                    cout << "\nLa pelicula mas cara es \"" << masCara.getTitulo() << "\" (Q"
+                        << fixed << setprecision(2) << masCara.getPrecioAlquiler() << ")." << endl;
+                }
+            }
+            else if (opcion == 7)
+            {
+                tienda.validarClientesNoVacio();
+                cout << "\n>>> CLIENTES ANTES DEL ORDENAMIENTO" << endl;
+                tienda.mostrarClientes();
+                tienda.ordenarClientesPorAlquileresSeleccion();
+                cout << "\n>>> CLIENTES DESPUES DEL ORDENAMIENTO" << endl;
+                tienda.mostrarClientes();
+
+                Cliente top = tienda.getPrimerCliente();
+                cout << "\nEl cliente con mas alquileres es " << top.getNombre() << " ("
+                    << top.getTotalAlquileres() << ")." << endl;
+            }
+        }
+        catch (const ExcepcionTienda& e)
+        {
+            cout << "Error: " << e.what() << endl;
+        }
+    } while (opcion != 0);
+}
+
+// PROGRAMA PRINCIPAL
+int main()
+{
+    Tienda tienda;
+    int opcion;
+
+    do
+    {
+        cout << "\n==============================" << endl;
+        cout << "   TIENDA DE RENTA DE PELICULAS" << endl;
+        cout << "==============================" << endl;
+        cout << "1. Gestion (peliculas y clientes)" << endl;
+        cout << "2. Alquileres, devoluciones y reservas" << endl;
+        cout << "3. Ordenamientos" << endl;
+        cout << "0. Salir" << endl;
+        opcion = leerEntero("Opcion: ", 0, 3);
+
+        switch (opcion)
+        {
+        case 1: menuGestion(tienda); break;
+        case 2: menuAlquileres(tienda); break;
+        case 3: menuOrdenamientos(tienda); break;
+        case 0: cout << "Hasta luego." << endl; break;
+        }
+    } while (opcion != 0);
+
+    return 0;
+}
